@@ -496,3 +496,31 @@ def test_main_execution():
     # Should succeed and show help
     assert result.returncode == 0
     assert "Find foreground colors" in result.stdout
+
+
+class TestPngErrorHandling:
+    """Test PNG-specific error handling scenarios."""
+
+    @patch('bgand256.cli.generate_readable_colors')
+    def test_cli_png_output_without_filename(self, mock_generate):
+        """Test PNG output without providing output filename."""
+        mock_generate.return_value = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
+
+        runner = CliRunner()
+        result = runner.invoke(main, ['-b', '#000000', '-F', 'png'])
+
+        assert result.exit_code == 1
+        assert "Error: PNG output requires -o/--output filename" in result.output
+
+    @patch('bgand256.cli.generate_readable_colors')
+    @patch('bgand256.cli.create_png_grid')
+    def test_cli_png_generation_exception(self, mock_create_png, mock_generate):
+        """Test PNG generation exception handling."""
+        mock_generate.return_value = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
+        mock_create_png.side_effect = Exception("PNG generation failed")
+
+        runner = CliRunner()
+        result = runner.invoke(main, ['-b', '#000000', '-F', 'png', '-o', 'test.png'])
+
+        assert result.exit_code == 1
+        assert "Error creating PNG: PNG generation failed" in result.output
