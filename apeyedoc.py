@@ -12,7 +12,7 @@ import json
 import pkgutil
 import sys
 import warnings
-from typing import Any
+from typing import Any, NotRequired, TypedDict
 
 
 def suppress_warnings() -> None:
@@ -49,9 +49,27 @@ def is_public_name(name: str) -> bool:
     return not name.startswith('_')
 
 
+class FunctionInfo(TypedDict):
+    name: str
+    docstring: str | None
+    signature: NotRequired[str]
+
+
+class MethodInfo(TypedDict):
+    name: str
+    docstring: str | None
+    signature: NotRequired[str]
+
+
+class ClassInfo(TypedDict):
+    name: str
+    docstring: str | None
+    methods: NotRequired[list[MethodInfo]]
+
+
 def collect_api_items(
     package_name: str = "colour", verbose: bool = False
-) -> tuple[list[dict], list[dict]]:
+) -> tuple[list[FunctionInfo], list[ClassInfo]]:
     """
     Collect all public functions and classes from the colour-science package.
 
@@ -62,8 +80,8 @@ def collect_api_items(
     Returns:
         Tuple of (functions, classes) lists containing API information
     """
-    functions = []
-    classes = []
+    functions: list[FunctionInfo] = []
+    classes: list[ClassInfo] = []
 
     try:
         package = importlib.import_module(package_name)
@@ -112,7 +130,7 @@ def collect_api_items(
             if inspect.isfunction(obj) or inspect.isbuiltin(obj):
                 # Handle functions
                 signature = get_type_signature(obj)
-                function_info = {
+                function_info: FunctionInfo = {
                     "name": qualified_name,
                     "docstring": docstring
                 }
@@ -123,13 +141,13 @@ def collect_api_items(
 
             elif inspect.isclass(obj):
                 # Handle classes
-                class_info = {
+                class_info: ClassInfo = {
                     "name": qualified_name,
                     "docstring": docstring
                 }
 
                 # Collect public methods
-                methods = []
+                methods: list[MethodInfo] = []
                 for method_name in dir(obj):
                     if is_public_name(method_name):
                         try:
@@ -137,7 +155,7 @@ def collect_api_items(
                             if inspect.ismethod(method) or inspect.isfunction(method):
                                 method_signature = get_type_signature(method)
                                 method_doc = extract_docstring(method)
-                                method_info = {
+                                method_info: MethodInfo = {
                                     "name": method_name,
                                     "docstring": method_doc
                                 }
@@ -155,9 +173,9 @@ def collect_api_items(
     return functions, classes
 
 
-def format_text_output(functions: list[dict], classes: list[dict]) -> str:
+def format_text_output(functions: list[FunctionInfo], classes: list[ClassInfo]) -> str:
     """Format API information as text."""
-    output_lines = []
+    output_lines: list[str] = []
 
     # Output functions
     if functions:
@@ -215,7 +233,7 @@ def format_text_output(functions: list[dict], classes: list[dict]) -> str:
     return "\n".join(output_lines)
 
 
-def format_json_output(functions: list[dict], classes: list[dict]) -> str:
+def format_json_output(functions: list[FunctionInfo], classes: list[ClassInfo]) -> str:
     """Format API information as JSON."""
     output = {
         "functions": functions,
