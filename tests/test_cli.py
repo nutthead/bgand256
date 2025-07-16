@@ -6,9 +6,9 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-from bgand256.cli import (
+from bgand256.cli import main
+from bgand256.color_utils import (
     format_color_output,
-    main,
     parse_color,
     parse_hex_color,
     parse_hsl_color,
@@ -378,7 +378,7 @@ class TestMainCLI:
         mock_generate.return_value = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
 
         runner = CliRunner()
-        result = runner.invoke(main, ['-b', '#000000', '--json'])
+        result = runner.invoke(main, ['-b', '#000000', '-F', 'json'])
 
         assert result.exit_code == 0
         # Parse the JSON output
