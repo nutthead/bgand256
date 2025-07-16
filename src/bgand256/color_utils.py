@@ -9,7 +9,7 @@ import numpy as np
 def parse_hex_color(color_str: str) -> tuple[float, float, float] | None:
     """Parse hexadecimal color format #RRGGBB."""
     color_str = color_str.strip()
-    if not color_str.startswith('#'):
+    if not color_str.startswith("#"):
         return None
 
     hex_str = color_str[1:]
@@ -27,7 +27,7 @@ def parse_hex_color(color_str: str) -> tuple[float, float, float] | None:
 
 def parse_rgb_color(color_str: str) -> tuple[float, float, float] | None:
     """Parse RGB color format rgb(R, G, B)."""
-    pattern = r'rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)'
+    pattern = r"rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)"
     match = re.match(pattern, color_str.strip(), re.IGNORECASE)
 
     if not match:
@@ -49,8 +49,8 @@ def parse_rgb_color(color_str: str) -> tuple[float, float, float] | None:
 def parse_hsl_color(color_str: str) -> tuple[float, float, float] | None:
     """Parse HSL color format hsl(H, S%, L%)."""
     pattern = (
-        r'hsl\s*\(\s*(\d+(?:\.\d+)?)\s*,\s*'
-        r'(\d+(?:\.\d+)?)\s*%\s*,\s*(\d+(?:\.\d+)?)\s*%\s*\)'
+        r"hsl\s*\(\s*(\d+(?:\.\d+)?)\s*,\s*"
+        r"(\d+(?:\.\d+)?)\s*%\s*,\s*(\d+(?:\.\d+)?)\s*%\s*\)"
     )
     match = re.match(pattern, color_str.strip(), re.IGNORECASE)
 
@@ -66,7 +66,7 @@ def parse_hsl_color(color_str: str) -> tuple[float, float, float] | None:
             return None
 
         # Convert HSL to RGB using colour-science
-        hsl = np.array([h/360, s/100, lightness/100])
+        hsl = np.array([h / 360, s / 100, lightness / 100])
         rgb = colour.models.rgb.cylindrical.HSL_to_RGB(hsl)
         return tuple(rgb)
     except (ValueError, AttributeError):
@@ -76,8 +76,8 @@ def parse_hsl_color(color_str: str) -> tuple[float, float, float] | None:
 def parse_hsv_color(color_str: str) -> tuple[float, float, float] | None:
     """Parse HSV color format hsv(H, S%, V%)."""
     pattern = (
-        r'hsv\s*\(\s*(\d+(?:\.\d+)?)\s*,\s*'
-        r'(\d+(?:\.\d+)?)\s*%\s*,\s*(\d+(?:\.\d+)?)\s*%\s*\)'
+        r"hsv\s*\(\s*(\d+(?:\.\d+)?)\s*,\s*"
+        r"(\d+(?:\.\d+)?)\s*%\s*,\s*(\d+(?:\.\d+)?)\s*%\s*\)"
     )
     match = re.match(pattern, color_str.strip(), re.IGNORECASE)
 
@@ -93,7 +93,7 @@ def parse_hsv_color(color_str: str) -> tuple[float, float, float] | None:
             return None
 
         # Convert HSV to RGB using colour-science
-        hsv = np.array([h/360, s/100, v/100])
+        hsv = np.array([h / 360, s / 100, v / 100])
         rgb = colour.models.rgb.cylindrical.HSV_to_RGB(hsv)
         return tuple(rgb)
     except (ValueError, AttributeError):
@@ -105,12 +105,7 @@ def parse_color(color_str: str) -> tuple[float, float, float]:
     color_str = color_str.strip()
 
     # Try each format
-    parsers = [
-        parse_hex_color,
-        parse_rgb_color,
-        parse_hsl_color,
-        parse_hsv_color
-    ]
+    parsers = [parse_hex_color, parse_rgb_color, parse_hsl_color, parse_hsv_color]
 
     for parser in parsers:
         result = parser(color_str)

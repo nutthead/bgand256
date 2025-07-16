@@ -42,7 +42,8 @@ from typing import Any
 import colour
 import numpy as np
 
-__all__ = ['generate_readable_colors']
+__all__ = ["generate_readable_colors"]
+
 
 def _compute_luminance(rgb: Any) -> float:
     """Compute the relative luminance of an sRGB color according to WCAG 2.0 standards.
@@ -121,6 +122,7 @@ def _compute_luminance(rgb: Any) -> float:
         _contrast_ratio: Uses luminance values to compute WCAG contrast ratios
         generate_readable_colors: Primary consumer of luminance calculations
     """
+
     def linearize(c: float) -> float:
         if c <= 0.03928:
             return c / 12.92
@@ -131,6 +133,7 @@ def _compute_luminance(rgb: Any) -> float:
     g_lin = linearize(g)
     b_lin = linearize(b)
     return 0.2126 * r_lin + 0.7152 * g_lin + 0.0722 * b_lin
+
 
 def _contrast_ratio(l1: float, l2: float) -> float:
     """Calculate WCAG 2.0 contrast ratio between two relative luminance values.
@@ -221,6 +224,7 @@ def _contrast_ratio(l1: float, l2: float) -> float:
     dark = min(l1, l2)
     return (light + 0.05) / (dark + 0.05)
 
+
 def generate_readable_colors(background_rgb: Any) -> list[tuple[float, float, float]]:
     """Generate up to 256 foreground colors with WCAG AA compliant contrast
     against a background.
@@ -305,7 +309,7 @@ def generate_readable_colors(background_rgb: Any) -> list[tuple[float, float, fl
     for hue in range(0, 360, 15):
         for saturation in [0.2, 0.4, 0.6, 0.8]:
             for lightness in [0.2, 0.4, 0.6, 0.8]:
-                hsl = np.array([hue/360, saturation, lightness])
+                hsl = np.array([hue / 360, saturation, lightness])
                 rgb = colour.models.rgb.cylindrical.HSL_to_RGB(hsl)
                 L_c = _compute_luminance(rgb)
                 if _contrast_ratio(L_bg, L_c) >= 4.5:
@@ -318,7 +322,7 @@ def generate_readable_colors(background_rgb: Any) -> list[tuple[float, float, fl
     for lightness in [0.1, 0.3, 0.5, 0.7, 0.9]:
         for hue in range(0, 360, 15):
             for saturation in [0.2, 0.4, 0.6, 0.8]:
-                hsl = np.array([hue/360, saturation, lightness])
+                hsl = np.array([hue / 360, saturation, lightness])
                 rgb = colour.models.rgb.cylindrical.HSL_to_RGB(hsl)
                 L_c = _compute_luminance(rgb)
                 if _contrast_ratio(L_bg, L_c) >= 4.5:

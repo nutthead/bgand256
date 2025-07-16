@@ -13,7 +13,7 @@ def create_png_grid(
     columns: int,
     output_file: str,
     tile_size: int = 16,
-    tile_margin: int = 5
+    tile_margin: int = 5,
 ) -> None:
     """Create a PNG image with colors arranged in a grid."""
     n_colors = len(colors)
@@ -29,7 +29,7 @@ def create_png_grid(
     h = (rows * (tile_size + tile_margin)) + tile_margin + tile_margin
 
     # Create figure and axis
-    fig, ax = plt.subplots(figsize=(w/100, h/100), dpi=100)  # type: ignore[misc]
+    fig, ax = plt.subplots(figsize=(w / 100, h / 100), dpi=100)  # type: ignore[misc]
 
     # Set background color
     fig.patch.set_facecolor(background_color)
@@ -38,7 +38,7 @@ def create_png_grid(
     # Remove axes
     ax.set_xlim(0, w)
     ax.set_ylim(0, h)
-    ax.axis('off')
+    ax.axis("off")
 
     # Draw color tiles
     for i, color in enumerate(colors):
@@ -51,15 +51,13 @@ def create_png_grid(
 
         # Create rectangle
         rect = patches.Rectangle(
-            (x, y), tile_size, tile_size,
-            linewidth=0,
-            facecolor=color
+            (x, y), tile_size, tile_size, linewidth=0, facecolor=color
         )
         ax.add_patch(rect)
 
     # Save the image
     plt.tight_layout()
-    plt.savefig(output_file, bbox_inches='tight', pad_inches=0, dpi=100)  # type: ignore[misc]
+    plt.savefig(output_file, bbox_inches="tight", pad_inches=0, dpi=100)  # type: ignore[misc]
     plt.close()
 
     click.echo(f"PNG grid saved to: {output_file}")
