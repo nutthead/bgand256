@@ -27,6 +27,7 @@ pytest-cov = "^4.0.0"
 ruff = "^0.12.3"
 mypy = "^1.17.0"
 pyright = "^1.1.390"
+Pygments = "^2.19.2"
 
 [tool.poetry.scripts]
 bgand256 = "bgand256.cli:main"

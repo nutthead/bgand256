@@ -1,0 +1,322 @@
+= bgand256 🎨
+:author: Behrang Saeedzadeh
+:email: hello@behrang.org
+:toc: macro
+:toc-placement!:
+:toclevels: 3
+:icons: font
+:source-highlighter: pygments
+:imagesdir: docs/images
+:experimental:
+:table-caption!:
+:figure-caption!:
+
+// Badges
+image:https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue?style=for-the-badge&logo=python&logoColor=white[Python Versions]
+image:https://img.shields.io/badge/WCAG_AA-Compliant-green?style=for-the-badge&logo=w3c&logoColor=white[WCAG AA]
+image:https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge[License]
+image:https://img.shields.io/badge/Colour_Science-Powered-purple?style=for-the-badge&logo=python&logoColor=white[Colour Science]
+image:https://img.shields.io/badge/Type_Safe-mypy_strict-blue?style=for-the-badge&logo=python&logoColor=white[Type Safe]
+
+[.lead]
+*bgand256* is a blazing-fast Python tool that generates up to 256 foreground colors with optimal contrast against any background color, ensuring WCAG AA compliance for accessibility. Perfect for creating accessible color palettes, themes, and visualizations! ✨
+
+toc::[]
+
+== 🌟 Features
+
+[cols="1,3", options="header"]
+|===
+| Feature | Description
+
+| 🎯 *WCAG AA Compliant*
+| All generated colors meet the minimum 4.5:1 contrast ratio for normal text
+
+| 🚀 *Lightning Fast*
+| Systematic HSL color space exploration with intelligent fallback algorithms
+
+| 🎨 *Multiple Output Formats*
+| Export as HEX, RGB, JSON, or beautiful PNG grids
+
+| 🔧 *Flexible Input*
+| Accepts colors in HEX (#RRGGBB), RGB (rgb(R,G,B)), HSL (hsl(H,S%,L%)), or HSV formats
+
+| 📊 *Customizable Output*
+| Control the number of colors, grid layout, tile sizes, and more
+
+| 🧪 *Science-Based*
+| Powered by `colour-science` for accurate color space conversions
+|===
+
+== 📦 Installation
+
+=== Using Poetry (Recommended)
+
+[source,bash]
+----
+# Clone the repository
+git clone https://github.com/behrangsa/bgand256.git
+cd bgand256
+
+# Install with Poetry
+poetry install
+
+# Run the tool
+poetry run bgand256 --help
+----
+
+=== Using pip (Coming Soon)
+
+[source,bash]
+----
+pip install bgand256
+----
+
+== 🚀 Quick Start
+
+=== Basic Usage
+
+Generate 256 accessible colors for a black background:
+
+[source,bash]
+----
+bgand256 -b "#000000"
+----
+
+=== Output Formats
+
+.Grid Output (Default)
+[source,bash]
+----
+bgand256 -b "#2E3440" --format hex
+----
+
+.JSON Output
+[source,bash]
+----
+bgand256 -b "rgb(46, 52, 64)" -F json -n 100
+----
+
+.PNG Grid
+[source,bash]
+----
+bgand256 -b "#000000" -F png -o palette.png --columns 16
+----
+
+== 🎨 Examples
+
+=== Dark Theme Palette
+
+Create a color palette for a dark theme:
+
+[source,bash]
+----
+bgand256 -b "#1e1e1e" -F png -c 8 -o dark-theme.png --tile-size 32
+----
+
+=== Light Theme Palette
+
+Generate colors for a light background:
+
+[source,bash]
+----
+bgand256 -b "#ffffff" -n 128 --format rgb
+----
+
+=== Custom HSL Background
+
+Use HSL color format for the background:
+
+[source,bash]
+----
+bgand256 -b "hsl(210, 50%, 20%)" -F json | jq '.[0:10]'
+----
+
+=== Large Preview Tiles
+
+Create a PNG with larger, spaced-out color tiles:
+
+[source,bash]
+----
+bgand256 -b "#282c34" -F png -o preview.png \
+  --tile-size 48 --tile-margin 10 --columns 6
+----
+
+== 🛠️ CLI Options
+
+[%header,cols="2,1,3,1"]
+|===
+| Option | Short | Description | Default
+
+| `--background-color`
+| `-b`
+| Background color (required)
+| -
+
+| `--format`
+| `-f`
+| Color format: hex, rgb, raw
+| hex
+
+| `--number`
+| `-n`
+| Number of colors (1-256)
+| 256
+
+| `--output-format`
+| `-F`
+| Output format: grid, json, png
+| grid
+
+| `--columns`
+| `-c`
+| Grid columns (1-32)
+| 4
+
+| `--output`
+| `-o`
+| Output file path (required for PNG)
+| -
+
+| `--tile-size`
+| -
+| PNG tile size in pixels (8-64)
+| 16
+
+| `--tile-margin`
+| -
+| PNG tile margin in pixels (0-20)
+| 5
+
+| `--help`
+| -
+| Show help message
+| -
+
+| `--version`
+| -
+| Show version
+| -
+|===
+
+== 🔬 How It Works
+
+bgand256 uses a sophisticated three-phase algorithm to generate accessible colors:
+
+=== Phase 1: Systematic HSL Exploration
+
+* **Hue**: 0° to 360° in 15° steps (24 values)
+* **Saturation**: [20%, 40%, 60%, 80%]
+* **Lightness**: [20%, 40%, 60%, 80%]
+
+This creates a comprehensive color grid while maintaining color diversity.
+
+=== Phase 2: Extended Lightness Search
+
+If Phase 1 doesn't yield 256 colors, additional lightness values are explored: [10%, 30%, 50%, 70%, 90%]
+
+=== Phase 3: Random Sampling Fallback
+
+For edge cases (e.g., mid-gray backgrounds), random HSL values are sampled until 256 valid colors are found.
+
+=== WCAG Compliance
+
+All colors are validated using the WCAG 2.0 contrast ratio formula:
+
+[source]
+----
+contrast = (L_lighter + 0.05) / (L_darker + 0.05)
+----
+
+Where L is the relative luminance calculated according to sRGB specifications.
+
+== 🧪 Development
+
+=== Setup Development Environment
+
+[source,bash]
+----
+# Install development dependencies
+poetry install
+
+# Run tests
+poetry run pytest
+
+# Type checking
+poetry run mypy src/
+poetry run pyright src/
+
+# Linting and formatting
+poetry run ruff check src/ tests/ --fix
+poetry run ruff format src/ tests/
+----
+
+=== Project Structure
+
+[source]
+----
+bgand256/
+├── src/bgand256/
+│   ├── __init__.py         # Package metadata
+│   ├── cli.py              # Command-line interface
+│   ├── colors.py           # Core color generation algorithm
+│   ├── color_utils.py      # Color parsing and formatting
+│   └── image_generation.py # PNG output generation
+├── tests/                  # Test suite
+├── pyproject.toml          # Project configuration
+└── README.adoc             # This file
+----
+
+== 📊 Performance
+
+bgand256 is optimized for speed:
+
+* Typical execution time: < 100ms for most backgrounds
+* Memory efficient: Uses NumPy arrays for calculations
+* Early termination: Stops as soon as 256 valid colors are found
+
+== 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+[source,bash]
+----
+# Fork the repository
+# Create your feature branch
+git checkout -b feature/amazing-feature
+
+# Make your changes and run tests
+poetry run pytest
+
+# Commit your changes
+git commit -m 'Add amazing feature'
+
+# Push to the branch
+git push origin feature/amazing-feature
+
+# Open a Pull Request
+----
+
+== 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+== 🙏 Acknowledgments
+
+* https://github.com/colour-science/colour[colour-science] - For excellent color space conversion utilities
+* https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html[WCAG Guidelines] - For accessibility standards
+* https://click.palletsprojects.com/[Click] - For the elegant CLI framework
+
+== 📬 Contact
+
+Behrang Saeedzadeh - hello@behrang.org
+
+Project Link: https://github.com/nutthead/bgand256
+
+---
+
+[.text-center]
+Made with ❤️ and ☕ by Behrang Saeedzadeh
+
+[.text-center]
+_"Colors are the smiles of nature."_ - Leigh Hunt
