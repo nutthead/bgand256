@@ -739,40 +739,19 @@ def _format_modules_section(modules: list[ModuleInfo]) -> list[str]:
     return lines
 
 
-def _rename_keys_for_json(data: Any) -> Any:
-    """Rename 'name' keys to type-specific camelCase names for JSON output."""
-    if isinstance(data, dict):
-        new_dict = {}
-        for key, value in data.items():
-            if key == "name" and "functions" in str(type(data)):
-                new_key = "functionName"
-            elif key == "name" and isinstance(value, str):
-                # Determine the type based on parent context
-                parent_key = None
-                for k, v in data.items():
-                    if isinstance(v, list) and any(
-                        isinstance(item, dict) and item.get("name") == value
-                        for item in v
-                    ):
-                        parent_key = k
-                        break
 
-                if parent_key == "methods":
-                    new_key = "methodName"
-                else:
-                    new_key = key
-            else:
-                new_key = key
-
-            new_dict[new_key] = _rename_keys_for_json(value)
-        return new_dict
-    elif isinstance(data, list):
-        return [_rename_keys_for_json(item) for item in data]
-    else:
-        return data
-
-
-def _rename_dict_keys_for_json(item: dict[str, Any], item_type: str) -> dict[str, Any]:
+def _rename_dict_keys_for_json(
+    item: (
+        dict[str, Any]
+        | FunctionInfo
+        | ClassInfo
+        | EnumInfo
+        | ConstantInfo
+        | VariableInfo
+        | ModuleInfo
+    ),
+    item_type: str,
+) -> dict[str, Any]:  # type: ignore
     """Rename 'name' key in a dictionary based on the item type."""
     new_item = {}
     for key, value in item.items():
@@ -800,16 +779,20 @@ def _rename_dict_keys_for_json(item: dict[str, Any], item_type: str) -> dict[str
 
         if key == "methods" and isinstance(value, list):
             new_item[new_key] = [
-                _rename_dict_keys_for_json(method, "method") for method in value
+                _rename_dict_keys_for_json(method, "method")  # type: ignore[arg-type]
+                for method in value  # type: ignore[misc]
+                if isinstance(method, dict)
             ]
         elif key == "members" and isinstance(value, list):
             new_item[new_key] = [
-                _rename_dict_keys_for_json(member, "member") for member in value
+                _rename_dict_keys_for_json(member, "member")  # type: ignore[arg-type]
+                for member in value  # type: ignore[misc]
+                if isinstance(member, dict)
             ]
         else:
             new_item[new_key] = value
 
-    return new_item
+    return new_item  # type: ignore[return-value]
 
 
 def _get_yaml_key_name(key: str, item_type: str) -> str:
@@ -835,7 +818,18 @@ def _get_yaml_key_name(key: str, item_type: str) -> str:
     return key_mappings.get(key, key)
 
 
-def _rename_dict_keys_for_yaml(item: dict[str, Any], item_type: str) -> dict[str, Any]:
+def _rename_dict_keys_for_yaml(
+    item: (
+        dict[str, Any]
+        | FunctionInfo
+        | ClassInfo
+        | EnumInfo
+        | ConstantInfo
+        | VariableInfo
+        | ModuleInfo
+    ),
+    item_type: str,
+) -> dict[str, Any]:  # type: ignore
     """Rename 'name' key in a dictionary based on the item type with kebab-case."""
     new_item = {}
     for key, value in item.items():
@@ -843,16 +837,20 @@ def _rename_dict_keys_for_yaml(item: dict[str, Any], item_type: str) -> dict[str
 
         if key == "methods" and isinstance(value, list):
             new_item[new_key] = [
-                _rename_dict_keys_for_yaml(method, "method") for method in value
+                _rename_dict_keys_for_yaml(method, "method")  # type: ignore[arg-type]
+                for method in value  # type: ignore[misc]
+                if isinstance(method, dict)
             ]
         elif key == "members" and isinstance(value, list):
             new_item[new_key] = [
-                _rename_dict_keys_for_yaml(member, "member") for member in value
+                _rename_dict_keys_for_yaml(member, "member")  # type: ignore[arg-type]
+                for member in value  # type: ignore[misc]
+                if isinstance(member, dict)
             ]
         else:
             new_item[new_key] = value
 
-    return new_item
+    return new_item  # type: ignore[return-value]
 
 
 def format_text_output(api_collection: APICollection) -> str:
