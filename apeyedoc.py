@@ -137,20 +137,23 @@ def _get_public_names(module: Any) -> list[str]:
     return [name for name in dir(module) if is_public_name(name)]
 
 
-def _create_function_info(qualified_name: str, obj: Any) -> FunctionInfo:
+def _create_function_info(
+    qualified_name: str, obj: Any, include_docstrings: bool = True
+) -> FunctionInfo:
     """Create function information dictionary."""
-    docstring = extract_docstring(obj)
-    signature = get_type_signature(obj)
     function_info: FunctionInfo = {
         "name": qualified_name,
-        "docstring": docstring
+        "docstring": extract_docstring(obj) if include_docstrings else None
     }
+    signature = get_type_signature(obj)
     if signature:
         function_info["signature"] = signature
     return function_info
 
 
-def _collect_class_methods(obj: Any) -> list[MethodInfo]:
+def _collect_class_methods(
+    obj: Any, include_docstrings: bool = True
+) -> list[MethodInfo]:
     """Collect public methods from a class object."""
     methods: list[MethodInfo] = []
     for method_name in dir(obj):
@@ -163,7 +166,7 @@ def _collect_class_methods(obj: Any) -> list[MethodInfo]:
                 continue
 
             method_signature = get_type_signature(method)
-            method_doc = extract_docstring(method)
+            method_doc = extract_docstring(method) if include_docstrings else None
             method_info: MethodInfo = {
                 "name": method_name,
                 "docstring": method_doc
@@ -177,15 +180,17 @@ def _collect_class_methods(obj: Any) -> list[MethodInfo]:
     return methods
 
 
-def _create_class_info(qualified_name: str, obj: Any) -> ClassInfo:
+def _create_class_info(
+    qualified_name: str, obj: Any, include_docstrings: bool = True
+) -> ClassInfo:
     """Create class information dictionary."""
-    docstring = extract_docstring(obj)
+    docstring = extract_docstring(obj) if include_docstrings else None
     class_info: ClassInfo = {
         "name": qualified_name,
         "docstring": docstring
     }
 
-    methods = _collect_class_methods(obj)
+    methods = _collect_class_methods(obj, include_docstrings)
     if methods:
         class_info["methods"] = methods
 
@@ -224,9 +229,11 @@ def _get_enum_type_name(obj: Any) -> str:
     return "Enum"
 
 
-def _create_enum_info(qualified_name: str, obj: Any) -> EnumInfo:
+def _create_enum_info(
+    qualified_name: str, obj: Any, include_docstrings: bool = True
+) -> EnumInfo:
     """Create enum information dictionary."""
-    docstring = extract_docstring(obj)
+    docstring = extract_docstring(obj) if include_docstrings else None
     enum_info: EnumInfo = {
         "name": qualified_name,
         "docstring": docstring
@@ -242,9 +249,10 @@ def _create_enum_info(qualified_name: str, obj: Any) -> EnumInfo:
                 "name": member.name,
                 "value": str(member.value)
             }
-            member_doc = extract_docstring(member)
-            if member_doc:
-                member_dict["docstring"] = member_doc
+            if include_docstrings:
+                member_doc = extract_docstring(member)
+                if member_doc:
+                    member_dict["docstring"] = member_doc
             members.append(member_dict)
 
         if members:
@@ -315,9 +323,11 @@ def _is_submodule_of_package(obj: Any, package_name: str) -> bool:
     return False
 
 
-def _create_module_info(qualified_name: str, obj: Any) -> ModuleInfo:
+def _create_module_info(
+    qualified_name: str, obj: Any, include_docstrings: bool = True
+) -> ModuleInfo:
     """Create module information dictionary."""
-    docstring = extract_docstring(obj)
+    docstring = extract_docstring(obj) if include_docstrings else None
     module_info: ModuleInfo = {
         "name": qualified_name,
         "docstring": docstring
@@ -331,7 +341,12 @@ def _create_module_info(qualified_name: str, obj: Any) -> ModuleInfo:
 
 
 def _process_object(
-    obj: Any, modname: str, name: str, package_name: str, verbose: bool
+    obj: Any,
+    modname: str,
+    name: str,
+    package_name: str,
+    verbose: bool,
+    include_docstrings: bool = True,
 ) -> tuple[
     FunctionInfo | None,
     ClassInfo | None,
@@ -344,13 +359,41 @@ def _process_object(
     qualified_name = get_qualified_name(modname, name)
 
     if inspect.isfunction(obj) or inspect.isbuiltin(obj):
-        return _create_function_info(qualified_name, obj), None, None, None, None, None
+        return (
+            _create_function_info(qualified_name, obj, include_docstrings),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
     elif _is_enum_class(obj):
-        return None, None, _create_enum_info(qualified_name, obj), None, None, None
+        return (
+            None,
+            None,
+            _create_enum_info(qualified_name, obj, include_docstrings),
+            None,
+            None,
+            None,
+        )
     elif inspect.isclass(obj):
-        return None, _create_class_info(qualified_name, obj), None, None, None, None
+        return (
+            None,
+            _create_class_info(qualified_name, obj, include_docstrings),
+            None,
+            None,
+            None,
+            None,
+        )
     elif inspect.ismodule(obj) and _is_submodule_of_package(obj, package_name):
-        return None, None, None, None, None, _create_module_info(qualified_name, obj)
+        return (
+            None,
+            None,
+            None,
+            None,
+            None,
+            _create_module_info(qualified_name, obj, include_docstrings),
+        )
     elif _is_constant(name, obj):
         return None, None, None, _create_constant_info(qualified_name, obj), None, None
     elif inspect.ismodule(obj):
@@ -362,7 +405,7 @@ def _process_object(
 
 
 def _process_module(
-    modname: str, package_name: str, verbose: bool
+    modname: str, package_name: str, verbose: bool, include_docstrings: bool = True
 ) -> tuple[
     list[FunctionInfo],
     list[ClassInfo],
@@ -403,7 +446,9 @@ def _process_module(
             constant_info,
             variable_info,
             module_info,
-        ) = _process_object(obj, modname, name, package_name, verbose)
+        ) = _process_object(
+            obj, modname, name, package_name, verbose, include_docstrings
+        )
 
         if function_info:
             functions.append(function_info)
@@ -422,7 +467,7 @@ def _process_module(
 
 
 def collect_api_items(
-    package_name: str = "colour", verbose: bool = False
+    package_name: str = "colour", verbose: bool = False, include_docstrings: bool = True
 ) -> APICollection:
     """
     Collect all public API elements from the specified package.
@@ -430,6 +475,7 @@ def collect_api_items(
     Args:
         package_name: Name of the package to analyze
         verbose: Whether to print verbose output during collection
+        include_docstrings: Whether to include docstrings in the output
 
     Returns:
         APICollection containing all discovered API elements
@@ -455,7 +501,7 @@ def collect_api_items(
 
         (
             functions, classes, enums, constants, variables, modules
-        ) = _process_module(modname, package_name, verbose)
+        ) = _process_module(modname, package_name, verbose, include_docstrings)
         all_functions.extend(functions)
         all_classes.extend(classes)
         all_enums.extend(enums)
@@ -699,6 +745,7 @@ Examples:
   %(prog)s scipy -o api.txt            # Save scipy API to text file
   %(prog)s requests -f json -o api.json # Save requests API as JSON
   %(prog)s flask -f yaml -o api.yaml   # Save flask API as YAML
+  %(prog)s django --no-docstrings      # Analyze django without docstrings
         """
     )
 
@@ -728,6 +775,12 @@ Examples:
         help="Specify output format (default: text)"
     )
 
+    parser.add_argument(
+        "--no-docstrings",
+        action="store_true",
+        help="Exclude docstrings from the output"
+    )
+
     args = parser.parse_args()
 
     # Suppress warnings unless verbose mode is enabled
@@ -737,7 +790,9 @@ Examples:
     # Collect API information
     try:
         api_collection = collect_api_items(
-            package_name=args.package, verbose=args.verbose
+            package_name=args.package,
+            verbose=args.verbose,
+            include_docstrings=not args.no_docstrings
         )
     except KeyboardInterrupt:
         print("\nAnalysis interrupted by user", file=sys.stderr)
