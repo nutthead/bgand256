@@ -206,6 +206,51 @@ class TestGenerateReadableColors:
             assert len(colors) > 0, f"No colors generated for background {background}"
             assert len(colors) <= 256
     
+    def test_systematic_generation_with_early_return(self):
+        """Test that systematic generation can find 256 colors and return early."""
+        # Test multiple backgrounds that should generate many valid colors
+        backgrounds_likely_to_hit_256 = [
+            [0, 0, 0],      # Pure black - all light colors work
+            [255, 255, 255], # Pure white - all dark colors work
+        ]
+        
+        for background in backgrounds_likely_to_hit_256:
+            colors = generate_readable_colors(background)
+            
+            # These backgrounds should generate close to or exactly 256 colors
+            assert len(colors) >= 100, f"Background {background} should generate many colors"
+            assert len(colors) <= 256
+            
+            # Verify contrast requirement
+            bg_luminance = compute_luminance(
+                np.array(background, dtype=float) / 255.0 if np.max(background) > 1.0 
+                else background
+            )
+            for color in colors[:10]:  # Check first 10 for performance
+                color_luminance = compute_luminance(color)
+                ratio = contrast_ratio(bg_luminance, color_luminance)
+                assert ratio >= 4.5
+    
+    def test_force_early_return_with_mock(self):
+        """Force the early return by mocking the HSL_to_RGB to return high-contrast colors."""
+        from unittest.mock import patch
+        import colour
+        
+        # Mock to always return white color (high contrast against any dark background)
+        with patch.object(colour.models.rgb.cylindrical, 'HSL_to_RGB') as mock_hsl:
+            mock_hsl.return_value = np.array([0.9, 0.9, 0.9])  # Light color
+            
+            # Use a dark background to ensure contrast
+            background = [0.1, 0.1, 0.1]
+            colors = generate_readable_colors(background)
+            
+            # Should hit the early return when valid_colors reaches 256
+            # Since all generated colors are light, they should all pass contrast test
+            assert len(colors) == 256
+            
+            # Verify mock was called
+            assert mock_hsl.called
+    
     def test_fallback_random_sampling_behavior(self):
         """Test that random sampling fallback works by using a background that won't generate 256 colors."""
         # Use a background that generates limited colors systematically

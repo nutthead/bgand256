@@ -124,6 +124,14 @@ class TestParseRgbColor:
         result = parse_rgb_color("rgb(red, green, blue)")
         assert result is None
     
+    @patch('builtins.int')
+    def test_invalid_rgb_value_error(self, mock_int):
+        """Test RGB parsing ValueError exception handling."""
+        # Force a ValueError by providing a string that matches the regex but has invalid int conversion
+        mock_int.side_effect = ValueError("Invalid int")
+        result = parse_rgb_color("rgb(255, 0, 0)")
+        assert result is None
+    
     def test_invalid_not_rgb_format(self):
         """Test string that's not in RGB format."""
         result = parse_rgb_color("#FF0000")
@@ -181,6 +189,14 @@ class TestParseHslColor:
         """Test invalid HSL missing % signs."""
         result = parse_hsl_color("hsl(180, 50, 50)")
         assert result is None
+    
+    @patch('colour.models.rgb.cylindrical.HSL_to_RGB')
+    def test_hsl_attribute_error_handling(self, mock_hsl_to_rgb):
+        """Test HSL parsing AttributeError exception handling."""
+        # Mock colour function to raise AttributeError
+        mock_hsl_to_rgb.side_effect = AttributeError("Mock error")
+        result = parse_hsl_color("hsl(180, 50%, 50%)")
+        assert result is None
 
 
 class TestParseHsvColor:
@@ -212,6 +228,14 @@ class TestParseHsvColor:
     def test_invalid_hsv_wrong_format(self):
         """Test invalid HSV format."""
         result = parse_hsv_color("hsv(180, 50)")
+        assert result is None
+    
+    @patch('colour.models.rgb.cylindrical.HSV_to_RGB')
+    def test_hsv_attribute_error_handling(self, mock_hsv_to_rgb):
+        """Test HSV parsing AttributeError exception handling."""
+        # Mock colour function to raise AttributeError
+        mock_hsv_to_rgb.side_effect = AttributeError("Mock error")
+        result = parse_hsv_color("hsv(180, 50%, 50%)")
         assert result is None
 
 
@@ -451,3 +475,22 @@ def test_color_parsing_parametrized(color_input, expected_valid):
     else:
         with pytest.raises(ValueError):
             parse_color(color_input)
+
+
+def test_main_execution():
+    """Test the __main__ execution path."""
+    # Test that the module can be executed as main
+    import subprocess
+    import sys
+    
+    # Run the module as main with --help to avoid hanging
+    result = subprocess.run(
+        [sys.executable, '-m', 'bgand256.cli', '--help'],
+        capture_output=True,
+        text=True,
+        cwd='/home/amadeus/Projects/github.com/behrangsa/contrastfind'
+    )
+    
+    # Should succeed and show help
+    assert result.returncode == 0
+    assert "Find foreground colors" in result.stdout
