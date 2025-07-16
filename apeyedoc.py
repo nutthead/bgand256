@@ -143,7 +143,7 @@ def _create_function_info(
     """Create function information dictionary."""
     if exclusions is None:
         exclusions = []
-    
+
     function_info: FunctionInfo = {
         "name": qualified_name,
     }
@@ -162,13 +162,13 @@ def _collect_class_methods(
     """Collect public methods from a class object."""
     if exclusions is None:
         exclusions = []
-    
+
     methods: list[MethodInfo] = []
-    
+
     # If methods are excluded, return empty list
     if "methods" in exclusions:
         return methods
-    
+
     for method_name in dir(obj):
         if not is_public_name(method_name):
             continue
@@ -202,7 +202,7 @@ def _create_class_info(
     """Create class information dictionary."""
     if exclusions is None:
         exclusions = []
-    
+
     class_info: ClassInfo = {
         "name": qualified_name,
     }
@@ -256,7 +256,7 @@ def _create_enum_info(
     """Create enum information dictionary."""
     if exclusions is None:
         exclusions = []
-    
+
     enum_info: EnumInfo = {
         "name": qualified_name,
     }
@@ -269,7 +269,7 @@ def _create_enum_info(
 
     # Collect enum members
     members: list[dict[str, Any]] = []
-    
+
     # If members are excluded, skip member collection
     if "members" not in exclusions:
         try:
@@ -358,7 +358,7 @@ def _create_module_info(
     """Create module information dictionary."""
     if exclusions is None:
         exclusions = []
-    
+
     module_info: ModuleInfo = {
         "name": qualified_name,
     }
@@ -392,7 +392,7 @@ def _process_object(
     """Process a single object and return appropriate info."""
     if exclusions is None:
         exclusions = []
-    
+
     qualified_name = get_qualified_name(modname, name)
 
     if inspect.isfunction(obj) or inspect.isbuiltin(obj):
@@ -454,7 +454,7 @@ def _process_module(
     """Process a single module and extract all API elements."""
     if exclusions is None:
         exclusions = []
-    
+
     module = _load_module(modname, verbose)
     if module is None:
         return [], [], [], [], [], []
@@ -507,7 +507,9 @@ def _process_module(
 
 
 def collect_api_items(
-    package_name: str = "colour", verbose: bool = False, exclusions: list[str] | None = None
+    package_name: str = "colour",
+    verbose: bool = False,
+    exclusions: list[str] | None = None,
 ) -> APICollection:
     """
     Collect all public API elements from the specified package.
@@ -522,7 +524,7 @@ def collect_api_items(
     """
     if exclusions is None:
         exclusions = []
-    
+
     package = _load_package(package_name)
 
     if verbose:
@@ -545,7 +547,7 @@ def collect_api_items(
         (
             functions, classes, enums, constants, variables, modules
         ) = _process_module(modname, package_name, verbose, exclusions)
-        
+
         # Apply exclusions at the collection level
         if "functions" not in exclusions:
             all_functions.extend(functions)
@@ -748,17 +750,20 @@ def _rename_keys_for_json(data: Any) -> Any:
                 # Determine the type based on parent context
                 parent_key = None
                 for k, v in data.items():
-                    if isinstance(v, list) and any(isinstance(item, dict) and item.get("name") == value for item in v):
+                    if isinstance(v, list) and any(
+                        isinstance(item, dict) and item.get("name") == value
+                        for item in v
+                    ):
                         parent_key = k
                         break
-                
+
                 if parent_key == "methods":
                     new_key = "methodName"
                 else:
                     new_key = key
             else:
                 new_key = key
-            
+
             new_dict[new_key] = _rename_keys_for_json(value)
         return new_dict
     elif isinstance(data, list):
@@ -792,56 +797,61 @@ def _rename_dict_keys_for_json(item: dict[str, Any], item_type: str) -> dict[str
                 new_key = key
         else:
             new_key = key
-        
+
         if key == "methods" and isinstance(value, list):
-            new_item[new_key] = [_rename_dict_keys_for_json(method, "method") for method in value]
+            new_item[new_key] = [
+                _rename_dict_keys_for_json(method, "method") for method in value
+            ]
         elif key == "members" and isinstance(value, list):
-            new_item[new_key] = [_rename_dict_keys_for_json(member, "member") for member in value]
+            new_item[new_key] = [
+                _rename_dict_keys_for_json(member, "member") for member in value
+            ]
         else:
             new_item[new_key] = value
-    
+
     return new_item
+
+
+def _get_yaml_key_name(key: str, item_type: str) -> str:
+    """Get the appropriate YAML key name based on key and item type."""
+    if key == "name":
+        name_mappings = {
+            "function": "function-name",
+            "class": "class-name",
+            "method": "method-name",
+            "enum": "enum-name",
+            "constant": "constant-name",
+            "variable": "variable-name",
+            "module": "module-name",
+            "member": "member-name",
+        }
+        return name_mappings.get(item_type, key)
+
+    key_mappings = {
+        "enum_type": "enum-type",
+        "type_name": "type-name",
+        "file_path": "file-path",
+    }
+    return key_mappings.get(key, key)
 
 
 def _rename_dict_keys_for_yaml(item: dict[str, Any], item_type: str) -> dict[str, Any]:
     """Rename 'name' key in a dictionary based on the item type with kebab-case."""
     new_item = {}
     for key, value in item.items():
-        if key == "name":
-            if item_type == "function":
-                new_key = "function-name"
-            elif item_type == "class":
-                new_key = "class-name"
-            elif item_type == "method":
-                new_key = "method-name"
-            elif item_type == "enum":
-                new_key = "enum-name"
-            elif item_type == "constant":
-                new_key = "constant-name"
-            elif item_type == "variable":
-                new_key = "variable-name"
-            elif item_type == "module":
-                new_key = "module-name"
-            elif item_type == "member":
-                new_key = "member-name"
-            else:
-                new_key = key
-        elif key == "enum_type":
-            new_key = "enum-type"
-        elif key == "type_name":
-            new_key = "type-name"
-        elif key == "file_path":
-            new_key = "file-path"
-        else:
-            new_key = key
-        
+        new_key = _get_yaml_key_name(key, item_type)
+
         if key == "methods" and isinstance(value, list):
-            new_item[new_key] = [_rename_dict_keys_for_yaml(method, "method") for method in value]
+            new_item[new_key] = [
+                _rename_dict_keys_for_yaml(method, "method") for method in value
+            ]
         elif key == "members" and isinstance(value, list):
-            new_item[new_key] = [_rename_dict_keys_for_yaml(member, "member") for member in value]
+            new_item[new_key] = [
+                _rename_dict_keys_for_yaml(member, "member") for member in value
+            ]
         else:
             new_item[new_key] = value
-    
+
     return new_item
 
 
@@ -860,22 +870,42 @@ def format_text_output(api_collection: APICollection) -> str:
     return "\n".join(output_lines)
 
 
-def format_json_output(api_collection: APICollection, package_name: str = "colour") -> str:
+def format_json_output(
+    api_collection: APICollection, package_name: str = "colour"
+) -> str:
     """Format API information as JSON with type-specific keys."""
     # Transform the API collection with renamed keys
     transformed_collection = {
-        "functions": [_rename_dict_keys_for_json(func, "function") for func in api_collection["functions"]],
-        "classes": [_rename_dict_keys_for_json(cls, "class") for cls in api_collection["classes"]],
-        "enums": [_rename_dict_keys_for_json(enum, "enum") for enum in api_collection["enums"]],
-        "constants": [_rename_dict_keys_for_json(const, "constant") for const in api_collection["constants"]],
-        "variables": [_rename_dict_keys_for_json(var, "variable") for var in api_collection["variables"]],
-        "modules": [_rename_dict_keys_for_json(mod, "module") for mod in api_collection["modules"]]
+        "functions": [
+            _rename_dict_keys_for_json(func, "function")
+            for func in api_collection["functions"]
+        ],
+        "classes": [
+            _rename_dict_keys_for_json(cls, "class")
+            for cls in api_collection["classes"]
+        ],
+        "enums": [
+            _rename_dict_keys_for_json(enum, "enum")
+            for enum in api_collection["enums"]
+        ],
+        "constants": [
+            _rename_dict_keys_for_json(const, "constant")
+            for const in api_collection["constants"]
+        ],
+        "variables": [
+            _rename_dict_keys_for_json(var, "variable")
+            for var in api_collection["variables"]
+        ],
+        "modules": [
+            _rename_dict_keys_for_json(mod, "module")
+            for mod in api_collection["modules"]
+        ]
     }
-    
+
     # Wrap with package-api root key
     root_key = f"{package_name}-api"
     wrapped_data = {root_key: transformed_collection}
-    
+
     return json.dumps(wrapped_data, indent=2, ensure_ascii=False)
 
 
@@ -886,22 +916,42 @@ def _represent_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
     return dumper.represent_scalar('tag:yaml.org,2002:str', data)  # type: ignore[misc]
 
 
-def format_yaml_output(api_collection: APICollection, package_name: str = "colour") -> str:
+def format_yaml_output(
+    api_collection: APICollection, package_name: str = "colour"
+) -> str:
     """Format API information as YAML with type-specific kebab-case keys."""
     # Transform the API collection with renamed keys
     transformed_collection = {
-        "functions": [_rename_dict_keys_for_yaml(func, "function") for func in api_collection["functions"]],
-        "classes": [_rename_dict_keys_for_yaml(cls, "class") for cls in api_collection["classes"]],
-        "enums": [_rename_dict_keys_for_yaml(enum, "enum") for enum in api_collection["enums"]],
-        "constants": [_rename_dict_keys_for_yaml(const, "constant") for const in api_collection["constants"]],
-        "variables": [_rename_dict_keys_for_yaml(var, "variable") for var in api_collection["variables"]],
-        "modules": [_rename_dict_keys_for_yaml(mod, "module") for mod in api_collection["modules"]]
+        "functions": [
+            _rename_dict_keys_for_yaml(func, "function")
+            for func in api_collection["functions"]
+        ],
+        "classes": [
+            _rename_dict_keys_for_yaml(cls, "class")
+            for cls in api_collection["classes"]
+        ],
+        "enums": [
+            _rename_dict_keys_for_yaml(enum, "enum")
+            for enum in api_collection["enums"]
+        ],
+        "constants": [
+            _rename_dict_keys_for_yaml(const, "constant")
+            for const in api_collection["constants"]
+        ],
+        "variables": [
+            _rename_dict_keys_for_yaml(var, "variable")
+            for var in api_collection["variables"]
+        ],
+        "modules": [
+            _rename_dict_keys_for_yaml(mod, "module")
+            for mod in api_collection["modules"]
+        ]
     }
-    
+
     # Wrap with package-api root key
     root_key = f"{package_name}-api"
     wrapped_data = {root_key: transformed_collection}
-    
+
     # Add custom representer for multiline strings
     yaml.add_representer(str, _represent_str)
 
@@ -933,7 +983,7 @@ Examples:
   %(prog)s requests -f json -o api.json # Save requests API as JSON
   %(prog)s flask -f yaml -o api.yaml   # Save flask API as YAML
   %(prog)s django -x docstrings        # Analyze django without docstrings
-  %(prog)s numpy -x signatures -x docstrings # Analyze numpy without signatures and docstrings
+  %(prog)s numpy -x signatures -x docstrings # Analyze numpy without both
   %(prog)s scipy -x classes -x methods # Analyze scipy without classes and methods
         """
     )
@@ -967,9 +1017,20 @@ Examples:
     parser.add_argument(
         "-x", "--exclude",
         action="append",
-        choices=["docstrings", "signatures", "classes", "functions", "methods", "enums", "constants", "variables", "modules", "members"],
+        choices=[
+            "docstrings",
+            "signatures",
+            "classes",
+            "functions",
+            "methods",
+            "enums",
+            "constants",
+            "variables",
+            "modules",
+            "members",
+        ],
         default=[],
-        help="Exclude specific content types from the output (can be used multiple times)"
+        help="Exclude specific content types from the output (repeatable)"
     )
 
     args = parser.parse_args()
