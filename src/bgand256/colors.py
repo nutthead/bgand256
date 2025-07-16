@@ -302,10 +302,10 @@ def generate_readable_colors(background_rgb: Any) -> list[tuple[float, float, fl
 
     # Phase 1: Systematic exploration with conservative saturation/lightness ranges
     # to ensure diverse color coverage while maintaining readability
-    for H in range(0, 360, 15):
-        for S in [0.2, 0.4, 0.6, 0.8]:
-            for L in [0.2, 0.4, 0.6, 0.8]:
-                hsl = np.array([H/360, S, L])
+    for hue in range(0, 360, 15):
+        for saturation in [0.2, 0.4, 0.6, 0.8]:
+            for lightness in [0.2, 0.4, 0.6, 0.8]:
+                hsl = np.array([hue/360, saturation, lightness])
                 rgb = colour.models.rgb.cylindrical.HSL_to_RGB(hsl)
                 L_c = _compute_luminance(rgb)
                 if _contrast_ratio(L_bg, L_c) >= 4.5:
@@ -315,10 +315,10 @@ def generate_readable_colors(background_rgb: Any) -> list[tuple[float, float, fl
 
     # Phase 2: Extended lightness search to capture edge cases where
     # initial grid missed high-contrast colors near luminance extremes
-    for L in [0.1, 0.3, 0.5, 0.7, 0.9]:
-        for H in range(0, 360, 15):
-            for S in [0.2, 0.4, 0.6, 0.8]:
-                hsl = np.array([H/360, S, L])
+    for lightness in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        for hue in range(0, 360, 15):
+            for saturation in [0.2, 0.4, 0.6, 0.8]:
+                hsl = np.array([hue/360, saturation, lightness])
                 rgb = colour.models.rgb.cylindrical.HSL_to_RGB(hsl)
                 L_c = _compute_luminance(rgb)
                 if _contrast_ratio(L_bg, L_c) >= 4.5:
@@ -330,10 +330,10 @@ def generate_readable_colors(background_rgb: Any) -> list[tuple[float, float, fl
     # fails to find 256 colors (e.g., mid-luminance backgrounds with narrow
     # contrast windows)
     while len(valid_colors) < 256:
-        H = np.random.uniform(0, 1)
-        S = np.random.uniform(0.2, 0.8)
-        L = np.random.uniform(0, 1)
-        hsl = np.array([H, S, L])
+        hue = np.random.uniform(0, 1)
+        saturation = np.random.uniform(0.2, 0.8)
+        lightness = np.random.uniform(0, 1)
+        hsl = np.array([hue, saturation, lightness])
         rgb = colour.models.rgb.cylindrical.HSL_to_RGB(hsl)
         L_c = _compute_luminance(rgb)
         if _contrast_ratio(L_bg, L_c) >= 4.5:
