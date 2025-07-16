@@ -15,6 +15,11 @@ import sys
 import warnings
 from typing import Any, NotRequired, TypedDict
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
 
 def suppress_warnings() -> None:
     """Suppress common warnings during module inspection."""
@@ -658,6 +663,21 @@ def format_json_output(api_collection: APICollection) -> str:
     return json.dumps(api_collection, indent=2, ensure_ascii=False)
 
 
+def format_yaml_output(api_collection: APICollection) -> str:
+    """Format API information as YAML."""
+    if yaml is None:
+        raise ImportError(
+            "PyYAML is required for YAML output. Install with: pip install PyYAML"
+        )
+    return yaml.dump(
+        api_collection,
+        default_flow_style=False,
+        sort_keys=True,
+        indent=2,
+        allow_unicode=True
+    )
+
+
 def main() -> None:
     """Main entry point for apeyedoc."""
     parser = argparse.ArgumentParser(
@@ -665,11 +685,13 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s colour                    # Analyze colour-science package
-  %(prog)s bgand256 -v               # Analyze bgand256 with verbose output
-  %(prog)s json -f json              # Analyze json package in JSON format
-  %(prog)s numpy -o api.txt          # Save numpy API to file
-  %(prog)s scipy -f json -o api.json # Save scipy API as JSON
+  %(prog)s colour                      # Analyze colour-science package
+  %(prog)s bgand256 -v                 # Analyze bgand256 with verbose output
+  %(prog)s json -f json                # Analyze json package in JSON format
+  %(prog)s numpy -f yaml               # Analyze numpy package in YAML format
+  %(prog)s scipy -o api.txt            # Save scipy API to text file
+  %(prog)s requests -f json -o api.json # Save requests API as JSON
+  %(prog)s flask -f yaml -o api.yaml   # Save flask API as YAML
         """
     )
 
@@ -694,7 +716,7 @@ Examples:
 
     parser.add_argument(
         "-f", "--format",
-        choices=["text", "json"],
+        choices=["text", "json", "yaml"],
         default="text",
         help="Specify output format (default: text)"
     )
@@ -729,6 +751,12 @@ Examples:
     # Format output
     if args.format == "json":
         output_content = format_json_output(api_collection)
+    elif args.format == "yaml":
+        try:
+            output_content = format_yaml_output(api_collection)
+        except ImportError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
         output_content = format_text_output(api_collection)
 
