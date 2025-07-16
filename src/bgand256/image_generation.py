@@ -11,7 +11,9 @@ def create_png_grid(
     background_color: tuple[float, float, float],
     colors: list[tuple[float, float, float]],
     columns: int,
-    output_file: str
+    output_file: str,
+    tile_size: int = 16,
+    tile_margin: int = 5
 ) -> None:
     """Create a PNG image with colors arranged in a grid."""
     n_colors = len(colors)
@@ -22,14 +24,12 @@ def create_png_grid(
     rows = math.ceil(n_colors / columns)
 
     # Image dimensions using the provided formula
-    tile_size = 16
-    margin = 5
-
-    w = (columns * (tile_size + margin)) + margin
-    h = (rows * (tile_size + margin)) + margin + margin  # Extra 5px bottom margin
+    w = (columns * (tile_size + tile_margin)) + tile_margin
+    # Extra bottom margin
+    h = (rows * (tile_size + tile_margin)) + tile_margin + tile_margin
 
     # Create figure and axis
-    fig, ax = plt.subplots(figsize=(w/100, h/100), dpi=100)
+    fig, ax = plt.subplots(figsize=(w/100, h/100), dpi=100)  # type: ignore[misc]
 
     # Set background color
     fig.patch.set_facecolor(background_color)
@@ -46,8 +46,8 @@ def create_png_grid(
         col = i % columns
 
         # Calculate position (flipping y-axis for proper display)
-        x = margin + col * (tile_size + margin)
-        y = h - margin - (row + 1) * (tile_size + margin)
+        x = tile_margin + col * (tile_size + tile_margin)
+        y = h - tile_margin - (row + 1) * (tile_size + tile_margin)
 
         # Create rectangle
         rect = patches.Rectangle(
@@ -59,7 +59,7 @@ def create_png_grid(
 
     # Save the image
     plt.tight_layout()
-    plt.savefig(output_file, bbox_inches='tight', pad_inches=0, dpi=100)
+    plt.savefig(output_file, bbox_inches='tight', pad_inches=0, dpi=100)  # type: ignore[misc]
     plt.close()
 
     click.echo(f"PNG grid saved to: {output_file}")

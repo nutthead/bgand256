@@ -49,13 +49,27 @@ from .image_generation import create_png_grid
     type=str,
     help='Output file path (required for PNG format)'
 )
+@click.option(
+    '--tile-size',
+    type=click.IntRange(8, 64),
+    default=16,
+    help='Size of square tiles in pixels for PNG format (default: 16)'
+)
+@click.option(
+    '--tile-margin',
+    type=click.IntRange(0, 20),
+    default=5,
+    help='Margin between tiles in pixels for PNG format (default: 5)'
+)
 def main(
     background_color: str,
     format: str,
     number: int,
     output_format: str,
     columns: int,
-    output: str
+    output: str,
+    tile_size: int,
+    tile_margin: int
 ):
     """Find foreground colors with good contrast against a background color.
 
@@ -71,6 +85,8 @@ def main(
         bgand256 -b "hsl(180, 50%, 50%)" --number 100 -F json
 
         bgand256 -b "#ff0000" -F png -c 8 -o colors.png
+
+        bgand256 -b "#000000" -F png --tile-size 32 --tile-margin 10 -o large_tiles.png
     """
     try:
         # Parse the background color
@@ -95,7 +111,7 @@ def main(
                 sys.exit(1)
 
             try:
-                create_png_grid(bg_rgb, colors, columns, output)
+                create_png_grid(bg_rgb, colors, columns, output, tile_size, tile_margin)
             except Exception as e:
                 click.echo(f"Error creating PNG: {e}", err=True)
                 sys.exit(1)
