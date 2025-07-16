@@ -54,7 +54,7 @@ cd src/bgand256 && python main.py
 
 ### Core Components
 
-1. **Color Generation Algorithm** (`src/bgand256/pymp.py`):
+1. **Color Generation Algorithm** (`src/bgand256/colors.py`):
    - `find_foreground_colors()`: Main function that generates 256 colors with sufficient contrast
    - Uses HSL color space for systematic color generation (hue steps of 15°, saturation levels of 20/40/60/80%)
    - Implements WCAG contrast ratio calculation via `colour-science` library

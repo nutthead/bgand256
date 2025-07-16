@@ -9,7 +9,7 @@ import colour
 import numpy as np
 
 from . import __version__
-from .pymp import generate_readable_colors
+from .colors import generate_readable_colors
 
 
 def parse_hex_color(color_str: str) -> Optional[Tuple[float, float, float]]:

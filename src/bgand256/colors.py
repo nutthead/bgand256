@@ -22,7 +22,7 @@ def contrast_ratio(l1, l2):
 
 def generate_readable_colors(background_rgb):
     # Normalize background to [0,1] if needed
-    background_rgb = np.array(background_rgb)
+    background_rgb = np.array(background_rgb, dtype=float)
     if np.max(background_rgb) > 1.0:
         background_rgb /= 255.0
 
