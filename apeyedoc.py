@@ -660,15 +660,29 @@ def format_json_output(api_collection: APICollection) -> str:
     return json.dumps(api_collection, indent=2, ensure_ascii=False)
 
 
+def _represent_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+    """Custom string representer that uses literal style for multiline strings."""
+    if '\n' in data:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')  # type: ignore[misc]
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data)  # type: ignore[misc]
+
+
 def format_yaml_output(api_collection: APICollection) -> str:
     """Format API information as YAML."""
-    return yaml.dump(
-        api_collection,
-        default_flow_style=False,
-        sort_keys=True,
-        indent=2,
-        allow_unicode=True
-    )
+    # Add custom representer for multiline strings
+    yaml.add_representer(str, _represent_str)
+
+    try:
+        return yaml.dump(
+            api_collection,
+            default_flow_style=False,
+            sort_keys=True,
+            indent=2,
+            allow_unicode=True
+        )
+    finally:
+        # Reset the representer to avoid affecting other uses of yaml
+        yaml.add_representer(str, yaml.representer.SafeRepresenter.represent_str)
 
 
 def main() -> None:
