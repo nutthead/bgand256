@@ -25,6 +25,7 @@ pytest = "^7.0.0"
 pytest-cov = "^4.0.0"
 ruff = "^0.12.3"
 mypy = "^1.17.0"
+pyright = "^1.1.390"
 
 [tool.poetry.scripts]
 bgand256 = "bgand256.cli:main"
@@ -66,6 +67,15 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["**/__pycache__"]
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
+typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

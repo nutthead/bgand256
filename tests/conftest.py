@@ -1,12 +1,12 @@
 """Test configuration and fixtures for bgand256 tests."""
 
-import pytest
+
 import numpy as np
-from typing import List, Tuple
+import pytest
 
 
 @pytest.fixture
-def sample_colors() -> List[Tuple[float, float, float]]:
+def sample_colors() -> list[tuple[float, float, float]]:
     """Provide sample RGB colors for testing."""
     return [
         (0.0, 0.0, 0.0),      # Black
@@ -22,11 +22,11 @@ def sample_colors() -> List[Tuple[float, float, float]]:
 
 
 @pytest.fixture
-def sample_backgrounds() -> List[List[float]]:
+def sample_backgrounds() -> list[list[float]]:
     """Provide sample background colors for testing."""
     return [
         [0, 0, 0],            # Black
-        [255, 255, 255],      # White  
+        [255, 255, 255],      # White
         [128, 128, 128],      # Gray (255 scale)
         [0.5, 0.5, 0.5],      # Gray (normalized)
         [255, 0, 0],          # Red
@@ -36,7 +36,7 @@ def sample_backgrounds() -> List[List[float]]:
 
 
 @pytest.fixture
-def known_luminance_values() -> List[Tuple[Tuple[float, float, float], float]]:
+def known_luminance_values() -> list[tuple[tuple[float, float, float], float]]:
     """Provide colors with known luminance values for testing."""
     return [
         ((0.0, 0.0, 0.0), 0.0),           # Black
@@ -48,7 +48,7 @@ def known_luminance_values() -> List[Tuple[Tuple[float, float, float], float]]:
 
 
 @pytest.fixture
-def color_format_examples() -> List[Tuple[str, Tuple[float, float, float]]]:
+def color_format_examples() -> list[tuple[str, tuple[float, float, float]]]:
     """Provide examples of different color formats with expected RGB values."""
     return [
         ("#FF0000", (1.0, 0.0, 0.0)),     # Hex red
@@ -64,7 +64,7 @@ def color_format_examples() -> List[Tuple[str, Tuple[float, float, float]]]:
 
 
 @pytest.fixture
-def invalid_color_formats() -> List[str]:
+def invalid_color_formats() -> list[str]:
     """Provide examples of invalid color format strings."""
     return [
         "invalid",
@@ -87,7 +87,7 @@ def invalid_color_formats() -> List[str]:
 
 
 @pytest.fixture
-def contrast_test_pairs() -> List[Tuple[float, float, float]]:
+def contrast_test_pairs() -> list[tuple[float, float, float]]:
     """Provide luminance pairs with known contrast ratios."""
     return [
         (0.0, 1.0, 21.0),      # Black vs White = 21:1
@@ -105,25 +105,28 @@ def reset_random_seed():
 
 class ColorTestHelpers:
     """Helper class with utility methods for color testing."""
-    
+
     @staticmethod
-    def rgb_to_255_scale(rgb: Tuple[float, float, float]) -> Tuple[int, int, int]:
+    def rgb_to_255_scale(rgb: tuple[float, float, float]) -> tuple[int, int, int]:
         """Convert RGB from [0,1] to [0,255] scale."""
-        return tuple(int(round(c * 255)) for c in rgb)
-    
+        r, g, b = rgb
+        return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255)))
+
     @staticmethod
-    def is_valid_rgb(rgb: Tuple[float, float, float]) -> bool:
+    def is_valid_rgb(rgb: tuple[float, float, float]) -> bool:
         """Check if RGB values are in valid [0,1] range."""
         return all(0.0 <= c <= 1.0 for c in rgb)
-    
+
     @staticmethod
     def colors_approximately_equal(
-        color1: Tuple[float, float, float], 
-        color2: Tuple[float, float, float], 
+        color1: tuple[float, float, float],
+        color2: tuple[float, float, float],
         tolerance: float = 0.01
     ) -> bool:
         """Check if two colors are approximately equal within tolerance."""
-        return all(abs(c1 - c2) < tolerance for c1, c2 in zip(color1, color2))
+        return all(
+            abs(c1 - c2) < tolerance for c1, c2 in zip(color1, color2, strict=False)
+        )
 
 
 @pytest.fixture

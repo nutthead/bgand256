@@ -25,8 +25,11 @@ poetry run ruff check src/ tests/ --fix
 # Format code (88 char line length, Black-compatible)
 poetry run ruff format src/ tests/
 
-# Type checking (strict mode enabled)
+# Type checking with mypy (strict mode enabled)
 poetry run mypy src/
+
+# Type checking with Pyright (comprehensive static analysis)
+poetry run pyright src/ tests/
 ```
 
 ### Testing
