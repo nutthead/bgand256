@@ -19,6 +19,7 @@ colour-science = "^0.4.6"
 matplotlib = "^3.10.3"
 numpy = "^2.3.0"
 scipy = "^1.16.0"
+PyYAML = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"

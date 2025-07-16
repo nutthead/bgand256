@@ -15,10 +15,7 @@ import sys
 import warnings
 from typing import Any, NotRequired, TypedDict
 
-try:
-    import yaml
-except ImportError:
-    yaml = None
+import yaml
 
 
 def suppress_warnings() -> None:
@@ -665,10 +662,6 @@ def format_json_output(api_collection: APICollection) -> str:
 
 def format_yaml_output(api_collection: APICollection) -> str:
     """Format API information as YAML."""
-    if yaml is None:
-        raise ImportError(
-            "PyYAML is required for YAML output. Install with: pip install PyYAML"
-        )
     return yaml.dump(
         api_collection,
         default_flow_style=False,
@@ -752,11 +745,7 @@ Examples:
     if args.format == "json":
         output_content = format_json_output(api_collection)
     elif args.format == "yaml":
-        try:
-            output_content = format_yaml_output(api_collection)
-        except ImportError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
+        output_content = format_yaml_output(api_collection)
     else:
         output_content = format_text_output(api_collection)
 
