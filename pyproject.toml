@@ -1,0 +1,74 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "bgand256"
+version = "0.1.0"
+description = "Find 256 suitable foregroundcolors with good contrast against a given background color"
+authors = ["Behrang Saeedzadeh <hello@behrang.org>"]
+license = "MIT"
+readme = "README.adoc"
+packages = [{ include = "bgand256", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+click = "^8.0.0"
+colorama = "^0.4.6"
+colour-science = "^0.4.6"
+numpy = "^2.3.0"
+scipy = "^1.16.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+pytest-cov = "^4.0.0"
+ruff = "^0.12.3"
+mypy = "^1.17.0"
+
+[tool.poetry.scripts]
+bgand256 = "bgand256.cli:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = []
+
+[tool.ruff.format]
+# Use Black's formatting style
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=src/bgand256 --cov-report=html --cov-report=term-missing"
