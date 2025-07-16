@@ -281,7 +281,6 @@ def generate_readable_colors(background_rgb):
         compute_luminance: Calculates relative luminance for contrast ratio computation
         contrast_ratio: Computes WCAG contrast ratio between two luminance values
     """
-    # Normalize background to [0,1] if needed
     background_rgb = np.array(background_rgb, dtype=float)
     if np.max(background_rgb) > 1.0:
         background_rgb /= 255.0
@@ -289,7 +288,8 @@ def generate_readable_colors(background_rgb):
     L_bg = compute_luminance(background_rgb)
     valid_colors = []
 
-    # Initial HSL grid
+    # Phase 1: Systematic exploration with conservative saturation/lightness ranges
+    # to ensure diverse color coverage while maintaining readability
     for H in range(0, 360, 15):
         for S in [0.2, 0.4, 0.6, 0.8]:
             for L in [0.2, 0.4, 0.6, 0.8]:
@@ -301,7 +301,8 @@ def generate_readable_colors(background_rgb):
                 if len(valid_colors) >= 256:
                     return valid_colors[:256]
 
-    # Expand grid if needed
+    # Phase 2: Extended lightness search to capture edge cases where
+    # initial grid missed high-contrast colors near luminance extremes
     for L in [0.1, 0.3, 0.5, 0.7, 0.9]:
         for H in range(0, 360, 15):
             for S in [0.2, 0.4, 0.6, 0.8]:
@@ -313,7 +314,8 @@ def generate_readable_colors(background_rgb):
                 if len(valid_colors) >= 256:
                     return valid_colors[:256]
 
-    # Fallback to random sampling if insufficient colors
+    # Phase 3: Random sampling for pathological cases where systematic exploration
+    # fails to find 256 colors (e.g., mid-luminance backgrounds with narrow contrast windows)
     while len(valid_colors) < 256:
         H = np.random.uniform(0, 1)
         S = np.random.uniform(0.2, 0.8)
