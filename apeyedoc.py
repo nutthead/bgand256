@@ -233,10 +233,10 @@ def _create_enum_info(qualified_name: str, obj: Any) -> EnumInfo:
     enum_info["enum_type"] = _get_enum_type_name(obj)
 
     # Collect enum members
-    members = []
+    members: list[dict[str, Any]] = []
     try:
         for member in obj:
-            member_dict = {
+            member_dict: dict[str, Any] = {
                 "name": member.name,
                 "value": str(member.value)
             }
