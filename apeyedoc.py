@@ -54,25 +54,25 @@ def is_public_name(name: str) -> bool:
 
 class FunctionInfo(TypedDict):
     name: str
-    docstring: str | None
+    docstring: NotRequired[str | None]
     signature: NotRequired[str]
 
 
 class MethodInfo(TypedDict):
     name: str
-    docstring: str | None
+    docstring: NotRequired[str | None]
     signature: NotRequired[str]
 
 
 class ClassInfo(TypedDict):
     name: str
-    docstring: str | None
+    docstring: NotRequired[str | None]
     methods: NotRequired[list[MethodInfo]]
 
 
 class EnumInfo(TypedDict):
     name: str
-    docstring: str | None
+    docstring: NotRequired[str | None]
     enum_type: NotRequired[str]  # Enum, IntEnum, Flag, etc.
     members: NotRequired[list[dict[str, Any]]]
 
@@ -93,7 +93,7 @@ class VariableInfo(TypedDict):
 
 class ModuleInfo(TypedDict):
     name: str
-    docstring: str | None
+    docstring: NotRequired[str | None]
     file_path: NotRequired[str | None]
 
 
@@ -143,8 +143,9 @@ def _create_function_info(
     """Create function information dictionary."""
     function_info: FunctionInfo = {
         "name": qualified_name,
-        "docstring": extract_docstring(obj) if include_docstrings else None
     }
+    if include_docstrings:
+        function_info["docstring"] = extract_docstring(obj)
     signature = get_type_signature(obj)
     if signature:
         function_info["signature"] = signature
@@ -166,11 +167,13 @@ def _collect_class_methods(
                 continue
 
             method_signature = get_type_signature(method)
-            method_doc = extract_docstring(method) if include_docstrings else None
             method_info: MethodInfo = {
                 "name": method_name,
-                "docstring": method_doc
             }
+            if include_docstrings:
+                method_doc = extract_docstring(method)
+                if method_doc:
+                    method_info["docstring"] = method_doc
             if method_signature:
                 method_info["signature"] = method_signature
             methods.append(method_info)
@@ -184,11 +187,13 @@ def _create_class_info(
     qualified_name: str, obj: Any, include_docstrings: bool = True
 ) -> ClassInfo:
     """Create class information dictionary."""
-    docstring = extract_docstring(obj) if include_docstrings else None
     class_info: ClassInfo = {
         "name": qualified_name,
-        "docstring": docstring
     }
+    if include_docstrings:
+        docstring = extract_docstring(obj)
+        if docstring:
+            class_info["docstring"] = docstring
 
     methods = _collect_class_methods(obj, include_docstrings)
     if methods:
@@ -233,11 +238,13 @@ def _create_enum_info(
     qualified_name: str, obj: Any, include_docstrings: bool = True
 ) -> EnumInfo:
     """Create enum information dictionary."""
-    docstring = extract_docstring(obj) if include_docstrings else None
     enum_info: EnumInfo = {
         "name": qualified_name,
-        "docstring": docstring
     }
+    if include_docstrings:
+        docstring = extract_docstring(obj)
+        if docstring:
+            enum_info["docstring"] = docstring
 
     enum_info["enum_type"] = _get_enum_type_name(obj)
 
@@ -327,11 +334,13 @@ def _create_module_info(
     qualified_name: str, obj: Any, include_docstrings: bool = True
 ) -> ModuleInfo:
     """Create module information dictionary."""
-    docstring = extract_docstring(obj) if include_docstrings else None
     module_info: ModuleInfo = {
         "name": qualified_name,
-        "docstring": docstring
     }
+    if include_docstrings:
+        docstring = extract_docstring(obj)
+        if docstring:
+            module_info["docstring"] = docstring
 
     # Add file path if available
     if hasattr(obj, "__file__") and obj.__file__:
