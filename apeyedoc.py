@@ -300,6 +300,19 @@ def _create_variable_info(qualified_name: str, obj: Any) -> VariableInfo:
     return variable_info
 
 
+def _is_submodule_of_package(obj: Any, package_name: str) -> bool:
+    """Check if a module is actually a submodule of the target package."""
+    if not inspect.ismodule(obj):
+        return False
+
+    # Check if the module name starts with the package name
+    if hasattr(obj, "__name__"):
+        module_name = obj.__name__
+        return module_name.startswith(package_name + ".")
+
+    return False
+
+
 def _create_module_info(qualified_name: str, obj: Any) -> ModuleInfo:
     """Create module information dictionary."""
     docstring = extract_docstring(obj)
@@ -316,7 +329,7 @@ def _create_module_info(qualified_name: str, obj: Any) -> ModuleInfo:
 
 
 def _process_object(
-    obj: Any, modname: str, name: str, verbose: bool
+    obj: Any, modname: str, name: str, package_name: str, verbose: bool
 ) -> tuple[
     FunctionInfo | None,
     ClassInfo | None,
@@ -334,17 +347,20 @@ def _process_object(
         return None, None, _create_enum_info(qualified_name, obj), None, None, None
     elif inspect.isclass(obj):
         return None, _create_class_info(qualified_name, obj), None, None, None, None
-    elif inspect.ismodule(obj):
+    elif inspect.ismodule(obj) and _is_submodule_of_package(obj, package_name):
         return None, None, None, None, None, _create_module_info(qualified_name, obj)
     elif _is_constant(name, obj):
         return None, None, None, _create_constant_info(qualified_name, obj), None, None
+    elif inspect.ismodule(obj):
+        # Skip imported modules that are not submodules of this package
+        return None, None, None, None, None, None
     else:
         # Treat as variable
         return None, None, None, None, _create_variable_info(qualified_name, obj), None
 
 
 def _process_module(
-    modname: str, verbose: bool
+    modname: str, package_name: str, verbose: bool
 ) -> tuple[
     list[FunctionInfo],
     list[ClassInfo],
@@ -385,7 +401,7 @@ def _process_module(
             constant_info,
             variable_info,
             module_info,
-        ) = _process_object(obj, modname, name, verbose)
+        ) = _process_object(obj, modname, name, package_name, verbose)
 
         if function_info:
             functions.append(function_info)
@@ -437,7 +453,7 @@ def collect_api_items(
 
         (
             functions, classes, enums, constants, variables, modules
-        ) = _process_module(modname, verbose)
+        ) = _process_module(modname, package_name, verbose)
         all_functions.extend(functions)
         all_classes.extend(classes)
         all_enums.extend(enums)
