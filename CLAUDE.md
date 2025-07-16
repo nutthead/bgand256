@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 bgand256 is a Python tool that finds 256 foreground colors with good contrast against a given background color, following WCAG accessibility guidelines with a minimum contrast ratio of 4.5:1.
 
+**Author Information:**
+- Author: Behrang Saeedzadeh
+- Email: hello@behrang.org
+- Use this author information for any new files or code documentation
+
 ## Commands
 
 ### Development Setup

@@ -32,7 +32,7 @@ Example:
     >>> len(accessible_colors)
     256
 
-Author: bgand256 development team
+Author: Behrang Saeedzadeh <hello@behrang.org>
 Version: 1.0.0
 License: MIT
 """
