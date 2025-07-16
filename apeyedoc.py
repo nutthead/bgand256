@@ -53,46 +53,46 @@ def is_public_name(name: str) -> bool:
 
 
 class FunctionInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to functionName/function-name in output
     docstring: NotRequired[str | None]
     signature: NotRequired[str]
 
 
 class MethodInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to methodName/method-name in output
     docstring: NotRequired[str | None]
     signature: NotRequired[str]
 
 
 class ClassInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to className/class-name in output
     docstring: NotRequired[str | None]
     methods: NotRequired[list[MethodInfo]]
 
 
 class EnumInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to enumName/enum-name in output
     docstring: NotRequired[str | None]
     enum_type: NotRequired[str]  # Enum, IntEnum, Flag, etc.
     members: NotRequired[list[dict[str, Any]]]
 
 
 class ConstantInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to constantName/constant-name in output
     value: NotRequired[str]
     type_name: NotRequired[str]
     docstring: NotRequired[str | None]
 
 
 class VariableInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to variableName/variable-name in output
     type_name: NotRequired[str]
     value: NotRequired[str]
     docstring: NotRequired[str | None]
 
 
 class ModuleInfo(TypedDict):
-    name: str
+    name: str  # Will be renamed to moduleName/module-name in output
     docstring: NotRequired[str | None]
     file_path: NotRequired[str | None]
 
@@ -138,25 +138,37 @@ def _get_public_names(module: Any) -> list[str]:
 
 
 def _create_function_info(
-    qualified_name: str, obj: Any, include_docstrings: bool = True
+    qualified_name: str, obj: Any, exclusions: list[str] | None = None
 ) -> FunctionInfo:
     """Create function information dictionary."""
+    if exclusions is None:
+        exclusions = []
+    
     function_info: FunctionInfo = {
         "name": qualified_name,
     }
-    if include_docstrings:
+    if "docstrings" not in exclusions:
         function_info["docstring"] = extract_docstring(obj)
-    signature = get_type_signature(obj)
-    if signature:
-        function_info["signature"] = signature
+    if "signatures" not in exclusions:
+        signature = get_type_signature(obj)
+        if signature:
+            function_info["signature"] = signature
     return function_info
 
 
 def _collect_class_methods(
-    obj: Any, include_docstrings: bool = True
+    obj: Any, exclusions: list[str] | None = None
 ) -> list[MethodInfo]:
     """Collect public methods from a class object."""
+    if exclusions is None:
+        exclusions = []
+    
     methods: list[MethodInfo] = []
+    
+    # If methods are excluded, return empty list
+    if "methods" in exclusions:
+        return methods
+    
     for method_name in dir(obj):
         if not is_public_name(method_name):
             continue
@@ -166,16 +178,17 @@ def _collect_class_methods(
             if not (inspect.ismethod(method) or inspect.isfunction(method)):
                 continue
 
-            method_signature = get_type_signature(method)
             method_info: MethodInfo = {
                 "name": method_name,
             }
-            if include_docstrings:
+            if "docstrings" not in exclusions:
                 method_doc = extract_docstring(method)
                 if method_doc:
                     method_info["docstring"] = method_doc
-            if method_signature:
-                method_info["signature"] = method_signature
+            if "signatures" not in exclusions:
+                method_signature = get_type_signature(method)
+                if method_signature:
+                    method_info["signature"] = method_signature
             methods.append(method_info)
         except Exception:
             continue
@@ -184,18 +197,21 @@ def _collect_class_methods(
 
 
 def _create_class_info(
-    qualified_name: str, obj: Any, include_docstrings: bool = True
+    qualified_name: str, obj: Any, exclusions: list[str] | None = None
 ) -> ClassInfo:
     """Create class information dictionary."""
+    if exclusions is None:
+        exclusions = []
+    
     class_info: ClassInfo = {
         "name": qualified_name,
     }
-    if include_docstrings:
+    if "docstrings" not in exclusions:
         docstring = extract_docstring(obj)
         if docstring:
             class_info["docstring"] = docstring
 
-    methods = _collect_class_methods(obj, include_docstrings)
+    methods = _collect_class_methods(obj, exclusions)
     if methods:
         class_info["methods"] = methods
 
@@ -235,13 +251,16 @@ def _get_enum_type_name(obj: Any) -> str:
 
 
 def _create_enum_info(
-    qualified_name: str, obj: Any, include_docstrings: bool = True
+    qualified_name: str, obj: Any, exclusions: list[str] | None = None
 ) -> EnumInfo:
     """Create enum information dictionary."""
+    if exclusions is None:
+        exclusions = []
+    
     enum_info: EnumInfo = {
         "name": qualified_name,
     }
-    if include_docstrings:
+    if "docstrings" not in exclusions:
         docstring = extract_docstring(obj)
         if docstring:
             enum_info["docstring"] = docstring
@@ -250,22 +269,25 @@ def _create_enum_info(
 
     # Collect enum members
     members: list[dict[str, Any]] = []
-    try:
-        for member in obj:
-            member_dict: dict[str, Any] = {
-                "name": member.name,
-                "value": str(member.value)
-            }
-            if include_docstrings:
-                member_doc = extract_docstring(member)
-                if member_doc:
-                    member_dict["docstring"] = member_doc
-            members.append(member_dict)
+    
+    # If members are excluded, skip member collection
+    if "members" not in exclusions:
+        try:
+            for member in obj:
+                member_dict: dict[str, Any] = {
+                    "name": member.name,
+                    "value": str(member.value)
+                }
+                if "docstrings" not in exclusions:
+                    member_doc = extract_docstring(member)
+                    if member_doc:
+                        member_dict["docstring"] = member_doc
+                members.append(member_dict)
 
-        if members:
-            enum_info["members"] = members
-    except Exception:
-        pass
+            if members:
+                enum_info["members"] = members
+        except Exception:
+            pass
 
     return enum_info
 
@@ -331,13 +353,16 @@ def _is_submodule_of_package(obj: Any, package_name: str) -> bool:
 
 
 def _create_module_info(
-    qualified_name: str, obj: Any, include_docstrings: bool = True
+    qualified_name: str, obj: Any, exclusions: list[str] | None = None
 ) -> ModuleInfo:
     """Create module information dictionary."""
+    if exclusions is None:
+        exclusions = []
+    
     module_info: ModuleInfo = {
         "name": qualified_name,
     }
-    if include_docstrings:
+    if "docstrings" not in exclusions:
         docstring = extract_docstring(obj)
         if docstring:
             module_info["docstring"] = docstring
@@ -355,7 +380,7 @@ def _process_object(
     name: str,
     package_name: str,
     verbose: bool,
-    include_docstrings: bool = True,
+    exclusions: list[str] | None = None,
 ) -> tuple[
     FunctionInfo | None,
     ClassInfo | None,
@@ -365,11 +390,14 @@ def _process_object(
     ModuleInfo | None
 ]:
     """Process a single object and return appropriate info."""
+    if exclusions is None:
+        exclusions = []
+    
     qualified_name = get_qualified_name(modname, name)
 
     if inspect.isfunction(obj) or inspect.isbuiltin(obj):
         return (
-            _create_function_info(qualified_name, obj, include_docstrings),
+            _create_function_info(qualified_name, obj, exclusions),
             None,
             None,
             None,
@@ -380,7 +408,7 @@ def _process_object(
         return (
             None,
             None,
-            _create_enum_info(qualified_name, obj, include_docstrings),
+            _create_enum_info(qualified_name, obj, exclusions),
             None,
             None,
             None,
@@ -388,7 +416,7 @@ def _process_object(
     elif inspect.isclass(obj):
         return (
             None,
-            _create_class_info(qualified_name, obj, include_docstrings),
+            _create_class_info(qualified_name, obj, exclusions),
             None,
             None,
             None,
@@ -401,7 +429,7 @@ def _process_object(
             None,
             None,
             None,
-            _create_module_info(qualified_name, obj, include_docstrings),
+            _create_module_info(qualified_name, obj, exclusions),
         )
     elif _is_constant(name, obj):
         return None, None, None, _create_constant_info(qualified_name, obj), None, None
@@ -414,7 +442,7 @@ def _process_object(
 
 
 def _process_module(
-    modname: str, package_name: str, verbose: bool, include_docstrings: bool = True
+    modname: str, package_name: str, verbose: bool, exclusions: list[str] | None = None
 ) -> tuple[
     list[FunctionInfo],
     list[ClassInfo],
@@ -424,6 +452,9 @@ def _process_module(
     list[ModuleInfo]
 ]:
     """Process a single module and extract all API elements."""
+    if exclusions is None:
+        exclusions = []
+    
     module = _load_module(modname, verbose)
     if module is None:
         return [], [], [], [], [], []
@@ -456,7 +487,7 @@ def _process_module(
             variable_info,
             module_info,
         ) = _process_object(
-            obj, modname, name, package_name, verbose, include_docstrings
+            obj, modname, name, package_name, verbose, exclusions
         )
 
         if function_info:
@@ -476,7 +507,7 @@ def _process_module(
 
 
 def collect_api_items(
-    package_name: str = "colour", verbose: bool = False, include_docstrings: bool = True
+    package_name: str = "colour", verbose: bool = False, exclusions: list[str] | None = None
 ) -> APICollection:
     """
     Collect all public API elements from the specified package.
@@ -484,11 +515,14 @@ def collect_api_items(
     Args:
         package_name: Name of the package to analyze
         verbose: Whether to print verbose output during collection
-        include_docstrings: Whether to include docstrings in the output
+        exclusions: List of content types to exclude from output
 
     Returns:
         APICollection containing all discovered API elements
     """
+    if exclusions is None:
+        exclusions = []
+    
     package = _load_package(package_name)
 
     if verbose:
@@ -510,13 +544,21 @@ def collect_api_items(
 
         (
             functions, classes, enums, constants, variables, modules
-        ) = _process_module(modname, package_name, verbose, include_docstrings)
-        all_functions.extend(functions)
-        all_classes.extend(classes)
-        all_enums.extend(enums)
-        all_constants.extend(constants)
-        all_variables.extend(variables)
-        all_modules.extend(modules)
+        ) = _process_module(modname, package_name, verbose, exclusions)
+        
+        # Apply exclusions at the collection level
+        if "functions" not in exclusions:
+            all_functions.extend(functions)
+        if "classes" not in exclusions:
+            all_classes.extend(classes)
+        if "enums" not in exclusions:
+            all_enums.extend(enums)
+        if "constants" not in exclusions:
+            all_constants.extend(constants)
+        if "variables" not in exclusions:
+            all_variables.extend(variables)
+        if "modules" not in exclusions:
+            all_modules.extend(modules)
 
     return {
         "functions": all_functions,
@@ -695,6 +737,114 @@ def _format_modules_section(modules: list[ModuleInfo]) -> list[str]:
     return lines
 
 
+def _rename_keys_for_json(data: Any) -> Any:
+    """Rename 'name' keys to type-specific camelCase names for JSON output."""
+    if isinstance(data, dict):
+        new_dict = {}
+        for key, value in data.items():
+            if key == "name" and "functions" in str(type(data)):
+                new_key = "functionName"
+            elif key == "name" and isinstance(value, str):
+                # Determine the type based on parent context
+                parent_key = None
+                for k, v in data.items():
+                    if isinstance(v, list) and any(isinstance(item, dict) and item.get("name") == value for item in v):
+                        parent_key = k
+                        break
+                
+                if parent_key == "methods":
+                    new_key = "methodName"
+                else:
+                    new_key = key
+            else:
+                new_key = key
+            
+            new_dict[new_key] = _rename_keys_for_json(value)
+        return new_dict
+    elif isinstance(data, list):
+        return [_rename_keys_for_json(item) for item in data]
+    else:
+        return data
+
+
+def _rename_dict_keys_for_json(item: dict[str, Any], item_type: str) -> dict[str, Any]:
+    """Rename 'name' key in a dictionary based on the item type."""
+    new_item = {}
+    for key, value in item.items():
+        if key == "name":
+            if item_type == "function":
+                new_key = "functionName"
+            elif item_type == "class":
+                new_key = "className"
+            elif item_type == "method":
+                new_key = "methodName"
+            elif item_type == "enum":
+                new_key = "enumName"
+            elif item_type == "constant":
+                new_key = "constantName"
+            elif item_type == "variable":
+                new_key = "variableName"
+            elif item_type == "module":
+                new_key = "moduleName"
+            elif item_type == "member":
+                new_key = "memberName"
+            else:
+                new_key = key
+        else:
+            new_key = key
+        
+        if key == "methods" and isinstance(value, list):
+            new_item[new_key] = [_rename_dict_keys_for_json(method, "method") for method in value]
+        elif key == "members" and isinstance(value, list):
+            new_item[new_key] = [_rename_dict_keys_for_json(member, "member") for member in value]
+        else:
+            new_item[new_key] = value
+    
+    return new_item
+
+
+def _rename_dict_keys_for_yaml(item: dict[str, Any], item_type: str) -> dict[str, Any]:
+    """Rename 'name' key in a dictionary based on the item type with kebab-case."""
+    new_item = {}
+    for key, value in item.items():
+        if key == "name":
+            if item_type == "function":
+                new_key = "function-name"
+            elif item_type == "class":
+                new_key = "class-name"
+            elif item_type == "method":
+                new_key = "method-name"
+            elif item_type == "enum":
+                new_key = "enum-name"
+            elif item_type == "constant":
+                new_key = "constant-name"
+            elif item_type == "variable":
+                new_key = "variable-name"
+            elif item_type == "module":
+                new_key = "module-name"
+            elif item_type == "member":
+                new_key = "member-name"
+            else:
+                new_key = key
+        elif key == "enum_type":
+            new_key = "enum-type"
+        elif key == "type_name":
+            new_key = "type-name"
+        elif key == "file_path":
+            new_key = "file-path"
+        else:
+            new_key = key
+        
+        if key == "methods" and isinstance(value, list):
+            new_item[new_key] = [_rename_dict_keys_for_yaml(method, "method") for method in value]
+        elif key == "members" and isinstance(value, list):
+            new_item[new_key] = [_rename_dict_keys_for_yaml(member, "member") for member in value]
+        else:
+            new_item[new_key] = value
+    
+    return new_item
+
+
 def format_text_output(api_collection: APICollection) -> str:
     """Format API information as text."""
     output_lines: list[str] = []
@@ -710,9 +860,23 @@ def format_text_output(api_collection: APICollection) -> str:
     return "\n".join(output_lines)
 
 
-def format_json_output(api_collection: APICollection) -> str:
-    """Format API information as JSON."""
-    return json.dumps(api_collection, indent=2, ensure_ascii=False)
+def format_json_output(api_collection: APICollection, package_name: str = "colour") -> str:
+    """Format API information as JSON with type-specific keys."""
+    # Transform the API collection with renamed keys
+    transformed_collection = {
+        "functions": [_rename_dict_keys_for_json(func, "function") for func in api_collection["functions"]],
+        "classes": [_rename_dict_keys_for_json(cls, "class") for cls in api_collection["classes"]],
+        "enums": [_rename_dict_keys_for_json(enum, "enum") for enum in api_collection["enums"]],
+        "constants": [_rename_dict_keys_for_json(const, "constant") for const in api_collection["constants"]],
+        "variables": [_rename_dict_keys_for_json(var, "variable") for var in api_collection["variables"]],
+        "modules": [_rename_dict_keys_for_json(mod, "module") for mod in api_collection["modules"]]
+    }
+    
+    # Wrap with package-api root key
+    root_key = f"{package_name}-api"
+    wrapped_data = {root_key: transformed_collection}
+    
+    return json.dumps(wrapped_data, indent=2, ensure_ascii=False)
 
 
 def _represent_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
@@ -722,14 +886,28 @@ def _represent_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
     return dumper.represent_scalar('tag:yaml.org,2002:str', data)  # type: ignore[misc]
 
 
-def format_yaml_output(api_collection: APICollection) -> str:
-    """Format API information as YAML."""
+def format_yaml_output(api_collection: APICollection, package_name: str = "colour") -> str:
+    """Format API information as YAML with type-specific kebab-case keys."""
+    # Transform the API collection with renamed keys
+    transformed_collection = {
+        "functions": [_rename_dict_keys_for_yaml(func, "function") for func in api_collection["functions"]],
+        "classes": [_rename_dict_keys_for_yaml(cls, "class") for cls in api_collection["classes"]],
+        "enums": [_rename_dict_keys_for_yaml(enum, "enum") for enum in api_collection["enums"]],
+        "constants": [_rename_dict_keys_for_yaml(const, "constant") for const in api_collection["constants"]],
+        "variables": [_rename_dict_keys_for_yaml(var, "variable") for var in api_collection["variables"]],
+        "modules": [_rename_dict_keys_for_yaml(mod, "module") for mod in api_collection["modules"]]
+    }
+    
+    # Wrap with package-api root key
+    root_key = f"{package_name}-api"
+    wrapped_data = {root_key: transformed_collection}
+    
     # Add custom representer for multiline strings
     yaml.add_representer(str, _represent_str)
 
     try:
         return yaml.dump(
-            api_collection,
+            wrapped_data,
             default_flow_style=False,
             sort_keys=True,
             indent=2,
@@ -754,7 +932,9 @@ Examples:
   %(prog)s scipy -o api.txt            # Save scipy API to text file
   %(prog)s requests -f json -o api.json # Save requests API as JSON
   %(prog)s flask -f yaml -o api.yaml   # Save flask API as YAML
-  %(prog)s django --no-docstrings      # Analyze django without docstrings
+  %(prog)s django -x docstrings        # Analyze django without docstrings
+  %(prog)s numpy -x signatures -x docstrings # Analyze numpy without signatures and docstrings
+  %(prog)s scipy -x classes -x methods # Analyze scipy without classes and methods
         """
     )
 
@@ -785,9 +965,11 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-docstrings",
-        action="store_true",
-        help="Exclude docstrings from the output"
+        "-x", "--exclude",
+        action="append",
+        choices=["docstrings", "signatures", "classes", "functions", "methods", "enums", "constants", "variables", "modules", "members"],
+        default=[],
+        help="Exclude specific content types from the output (can be used multiple times)"
     )
 
     args = parser.parse_args()
@@ -801,7 +983,7 @@ Examples:
         api_collection = collect_api_items(
             package_name=args.package,
             verbose=args.verbose,
-            include_docstrings=not args.no_docstrings
+            exclusions=args.exclude
         )
     except KeyboardInterrupt:
         print("\nAnalysis interrupted by user", file=sys.stderr)
@@ -821,9 +1003,9 @@ Examples:
 
     # Format output
     if args.format == "json":
-        output_content = format_json_output(api_collection)
+        output_content = format_json_output(api_collection, args.package)
     elif args.format == "yaml":
-        output_content = format_yaml_output(api_collection)
+        output_content = format_yaml_output(api_collection, args.package)
     else:
         output_content = format_text_output(api_collection)
 
