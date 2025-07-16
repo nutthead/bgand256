@@ -67,6 +67,140 @@ class ClassInfo(TypedDict):
     methods: NotRequired[list[MethodInfo]]
 
 
+def _load_package(package_name: str) -> Any:
+    """Load and return the specified package."""
+    try:
+        return importlib.import_module(package_name)
+    except ImportError as e:
+        print(f"Error: Could not import {package_name}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _should_skip_module(modname: str) -> bool:
+    """Check if a module should be skipped during analysis."""
+    return 'test' in modname or '._' in modname
+
+
+def _load_module(modname: str, verbose: bool) -> Any | None:
+    """Load a module and handle errors gracefully."""
+    try:
+        return importlib.import_module(modname)
+    except Exception as e:
+        if verbose:
+            print(f"Warning: Could not import {modname}: {e}")
+        return None
+
+
+def _get_public_names(module: Any) -> list[str]:
+    """Get public names from a module."""
+    if hasattr(module, '__all__'):
+        return module.__all__
+    return [name for name in dir(module) if is_public_name(name)]
+
+
+def _create_function_info(qualified_name: str, obj: Any) -> FunctionInfo:
+    """Create function information dictionary."""
+    docstring = extract_docstring(obj)
+    signature = get_type_signature(obj)
+    function_info: FunctionInfo = {
+        "name": qualified_name,
+        "docstring": docstring
+    }
+    if signature:
+        function_info["signature"] = signature
+    return function_info
+
+
+def _collect_class_methods(obj: Any) -> list[MethodInfo]:
+    """Collect public methods from a class object."""
+    methods: list[MethodInfo] = []
+    for method_name in dir(obj):
+        if not is_public_name(method_name):
+            continue
+
+        try:
+            method = getattr(obj, method_name)
+            if not (inspect.ismethod(method) or inspect.isfunction(method)):
+                continue
+
+            method_signature = get_type_signature(method)
+            method_doc = extract_docstring(method)
+            method_info: MethodInfo = {
+                "name": method_name,
+                "docstring": method_doc
+            }
+            if method_signature:
+                method_info["signature"] = method_signature
+            methods.append(method_info)
+        except Exception:
+            continue
+
+    return methods
+
+
+def _create_class_info(qualified_name: str, obj: Any) -> ClassInfo:
+    """Create class information dictionary."""
+    docstring = extract_docstring(obj)
+    class_info: ClassInfo = {
+        "name": qualified_name,
+        "docstring": docstring
+    }
+
+    methods = _collect_class_methods(obj)
+    if methods:
+        class_info["methods"] = methods
+
+    return class_info
+
+
+def _process_object(
+    obj: Any, modname: str, name: str, verbose: bool
+) -> tuple[FunctionInfo | None, ClassInfo | None]:
+    """Process a single object and return appropriate info."""
+    qualified_name = get_qualified_name(modname, name)
+
+    if inspect.isfunction(obj) or inspect.isbuiltin(obj):
+        return _create_function_info(qualified_name, obj), None
+    elif inspect.isclass(obj):
+        return None, _create_class_info(qualified_name, obj)
+
+    return None, None
+
+
+def _process_module(
+    modname: str, verbose: bool
+) -> tuple[list[FunctionInfo], list[ClassInfo]]:
+    """Process a single module and extract functions and classes."""
+    module = _load_module(modname, verbose)
+    if module is None:
+        return [], []
+
+    if verbose:
+        print(f"Examining module: {modname}")
+
+    functions: list[FunctionInfo] = []
+    classes: list[ClassInfo] = []
+
+    public_names = _get_public_names(module)
+
+    for name in public_names:
+        try:
+            obj = getattr(module, name)
+        except AttributeError:
+            if verbose:
+                print(f"Warning: {modname} has no attribute {name}")
+            continue
+
+        function_info, class_info = _process_object(obj, modname, name, verbose)
+
+        if function_info:
+            functions.append(function_info)
+        if class_info:
+            classes.append(class_info)
+
+    return functions, classes
+
+
 def collect_api_items(
     package_name: str = "colour", verbose: bool = False
 ) -> tuple[list[FunctionInfo], list[ClassInfo]]:
@@ -80,97 +214,26 @@ def collect_api_items(
     Returns:
         Tuple of (functions, classes) lists containing API information
     """
-    functions: list[FunctionInfo] = []
-    classes: list[ClassInfo] = []
-
-    try:
-        package = importlib.import_module(package_name)
-    except ImportError as e:
-        print(f"Error: Could not import {package_name}: {e}", file=sys.stderr)
-        sys.exit(1)
+    package = _load_package(package_name)
 
     if verbose:
         print(f"Analyzing package: {package_name}")
+
+    all_functions: list[FunctionInfo] = []
+    all_classes: list[ClassInfo] = []
 
     # Walk through all modules in the package
     for _importer, modname, _ispkg in pkgutil.walk_packages(
         package.__path__, package.__name__ + '.'
     ):
-        # Skip test modules and private modules
-        if 'test' in modname or '._' in modname:
+        if _should_skip_module(modname):
             continue
 
-        if verbose:
-            print(f"Examining module: {modname}")
+        functions, classes = _process_module(modname, verbose)
+        all_functions.extend(functions)
+        all_classes.extend(classes)
 
-        try:
-            module = importlib.import_module(modname)
-        except Exception as e:
-            if verbose:
-                print(f"Warning: Could not import {modname}: {e}")
-            continue
-
-        # Get public names from module
-        if hasattr(module, '__all__'):
-            public_names = module.__all__
-        else:
-            public_names = [name for name in dir(module) if is_public_name(name)]
-
-        for name in public_names:
-            try:
-                obj = getattr(module, name)
-            except AttributeError:
-                if verbose:
-                    print(f"Warning: {modname} has no attribute {name}")
-                continue
-
-            qualified_name = get_qualified_name(modname, name)
-            docstring = extract_docstring(obj)
-
-            if inspect.isfunction(obj) or inspect.isbuiltin(obj):
-                # Handle functions
-                signature = get_type_signature(obj)
-                function_info: FunctionInfo = {
-                    "name": qualified_name,
-                    "docstring": docstring
-                }
-                if signature:
-                    function_info["signature"] = signature
-
-                functions.append(function_info)
-
-            elif inspect.isclass(obj):
-                # Handle classes
-                class_info: ClassInfo = {
-                    "name": qualified_name,
-                    "docstring": docstring
-                }
-
-                # Collect public methods
-                methods: list[MethodInfo] = []
-                for method_name in dir(obj):
-                    if is_public_name(method_name):
-                        try:
-                            method = getattr(obj, method_name)
-                            if inspect.ismethod(method) or inspect.isfunction(method):
-                                method_signature = get_type_signature(method)
-                                method_doc = extract_docstring(method)
-                                method_info: MethodInfo = {
-                                    "name": method_name,
-                                    "docstring": method_doc
-                                }
-                                if method_signature:
-                                    method_info["signature"] = method_signature
-                                methods.append(method_info)
-                        except Exception:
-                            continue
-
-                if methods:
-                    class_info["methods"] = methods
-
-                classes.append(class_info)
-
-    return functions, classes
+    return all_functions, all_classes
 
 
 def format_text_output(functions: list[FunctionInfo], classes: list[ClassInfo]) -> str:
