@@ -151,13 +151,20 @@ def _greedy_select_contrasting_colors(
     algorithm: AlgorithmType,
     min_mutual_distance: float | None = None,
 ) -> list[tuple[float, float, float]]:
-    """Use greedy algorithm to select maximally contrasting colors."""
+    """Use optimized greedy algorithm to select maximally contrasting colors.
+    
+    This version uses a distance matrix approach for better performance:
+    - O(n²) preprocessing to compute all pairwise distances
+    - O(n × t) selection where n = candidates, t = target_count
+    - Total: O(n²) instead of O(t² × n) for the naive approach
+    """
     if not candidates:
         return []
-
-    distance_fn = _get_distance_function(algorithm)
-    selected: list[tuple[float, float, float]] = []
-
+    
+    n = len(candidates)
+    if n <= target_count:
+        return candidates[:target_count]
+    
     # Set algorithm-specific minimum distances if not provided
     if min_mutual_distance is None:
         min_distances = {
@@ -166,44 +173,105 @@ def _greedy_select_contrasting_colors(
             "hsl-greedy": 0.3,  # HSL perceptual distance units
         }
         min_mutual_distance = min_distances[algorithm]
-
-    # Start with the first candidate
-    selected.append(candidates[0])
-    remaining = candidates[1:]
-
-    while len(selected) < target_count and remaining:
-        best_candidate = None
-        best_min_distance = 0
-
-        for candidate in remaining:
-            # Calculate minimum distance to all selected colors
-            min_distance = min(
-                distance_fn(candidate, selected_color) for selected_color in selected
-            )
-
-            # Select candidate with maximum minimum distance
-            if min_distance > best_min_distance:
-                best_min_distance = min_distance
-                best_candidate = candidate
-
-        if best_candidate is None:
-            break
-
-        # Only add if it meets minimum distance requirement
-        if (
-            best_min_distance >= min_mutual_distance or len(selected) < 8
-        ):  # Always allow first 8
-            selected.append(best_candidate)
-            remaining.remove(best_candidate)
-        else:
-            # If no candidate meets distance requirement, select the best available
-            if best_candidate and len(selected) < target_count // 2:
+    
+    distance_fn = _get_distance_function(algorithm)
+    
+    # For small candidate sets, use original algorithm
+    if n < 100:
+        selected: list[tuple[float, float, float]] = []
+        selected.append(candidates[0])
+        remaining = candidates[1:]
+        
+        while len(selected) < target_count and remaining:
+            best_candidate = None
+            best_min_distance = 0
+            
+            for candidate in remaining:
+                min_distance = min(
+                    distance_fn(candidate, selected_color) for selected_color in selected
+                )
+                
+                if min_distance > best_min_distance:
+                    best_min_distance = min_distance
+                    best_candidate = candidate
+            
+            if best_candidate is None:
+                break
+            
+            if best_min_distance >= min_mutual_distance or len(selected) < 8:
+                selected.append(best_candidate)
+                remaining.remove(best_candidate)
+            elif len(selected) < target_count // 2:
                 selected.append(best_candidate)
                 remaining.remove(best_candidate)
             else:
                 break
-
-    return selected
+        
+        return selected
+    
+    # For larger sets, use optimized matrix approach
+    # Pre-compute distance matrix (only upper triangle needed)
+    distance_cache = {}
+    
+    def get_distance(i: int, j: int) -> float:
+        """Get cached distance between candidates i and j."""
+        if i == j:
+            return 0.0
+        if i > j:
+            i, j = j, i
+        key = (i, j)
+        if key not in distance_cache:
+            distance_cache[key] = distance_fn(candidates[i], candidates[j])
+        return distance_cache[key]
+    
+    # Track selected indices and minimum distances
+    selected_indices = []
+    min_distances = [float('inf')] * n
+    
+    # Select first candidate (could optimize this)
+    selected_indices.append(0)
+    for i in range(1, n):
+        min_distances[i] = get_distance(0, i)
+    min_distances[0] = -1  # Mark as selected
+    
+    # Greedy selection
+    while len(selected_indices) < target_count:
+        # Find candidate with maximum minimum distance
+        best_idx = -1
+        best_dist = -1
+        
+        for i in range(n):
+            if min_distances[i] > best_dist and min_distances[i] > 0:
+                best_dist = min_distances[i]
+                best_idx = i
+        
+        if best_idx == -1:  # No more candidates
+            break
+        
+        # Check if candidate meets criteria
+        if best_dist >= min_mutual_distance or len(selected_indices) < 8:
+            selected_indices.append(best_idx)
+            
+            # Update minimum distances
+            for i in range(n):
+                if min_distances[i] > 0:  # Not yet selected
+                    dist = get_distance(best_idx, i)
+                    min_distances[i] = min(min_distances[i], dist)
+            min_distances[best_idx] = -1  # Mark as selected
+        elif len(selected_indices) < target_count // 2:
+            # Relax criteria if we need more colors
+            selected_indices.append(best_idx)
+            
+            # Update minimum distances
+            for i in range(n):
+                if min_distances[i] > 0:
+                    dist = get_distance(best_idx, i)
+                    min_distances[i] = min(min_distances[i], dist)
+            min_distances[best_idx] = -1
+        else:
+            break
+    
+    return [candidates[i] for i in selected_indices]
 
 
 def generate_contrasting_colors(
