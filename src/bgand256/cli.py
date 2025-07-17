@@ -80,6 +80,16 @@ from .image_generation import create_png_grid
         "hsl-greedy (fastest)"
     ),
 )
+@click.option(
+    "--contrast-ratio",
+    type=click.FloatRange(1.0, 21.0),
+    default=4.5,
+    help=(
+        "Minimum contrast ratio for WCAG compliance (default: 4.5). "
+        "Common values: 3.0 (AA large text), 4.5 (AA normal text), "
+        "7.0 (AAA normal text)"
+    ),
+)
 def main(
     background_color: str,
     format: str,
@@ -90,6 +100,7 @@ def main(
     tile_size: int,
     tile_margin: int,
     algorithm: str,
+    contrast_ratio: float,
 ) -> None:
     """Find foreground colors with good contrast against a background color.
 
@@ -116,6 +127,10 @@ def main(
         bgand256 -b "#ffffff" -a cam16ucs --number 100 -F json
 
         bgand256 -b "#808080" -a hsl-greedy -F png -o fast_colors.png
+
+        bgand256 -b "#faf4ed" -a delta-e --contrast-ratio 2.0 -n 50
+
+        bgand256 -b "#000000" --contrast-ratio 7.0 -n 100
     """
     try:
         # Parse the background color
@@ -127,7 +142,7 @@ def main(
         else:
             # Use advanced contrasting algorithms
             algorithm_type: AlgorithmType = algorithm  # type: ignore[assignment]
-            colors = generate_contrasting_colors(bg_rgb, number, algorithm_type)
+            colors = generate_contrasting_colors(bg_rgb, number, algorithm_type, contrast_ratio)
 
         # Limit to requested number
         colors = colors[:number]
