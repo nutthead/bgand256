@@ -28,6 +28,7 @@ ruff = "^0.12.3"
 mypy = "^1.17.0"
 pyright = "^1.1.390"
 Pygments = "^2.19.2"
+hypothesis = "^6.135.32"
 
 [tool.poetry.scripts]
 bgand256 = "bgand256.cli:main"
