@@ -489,8 +489,7 @@ def test_main_execution():
     result = subprocess.run(
         [sys.executable, '-m', 'bgand256.cli', '--help'],
         capture_output=True,
-        text=True,
-        cwd='/home/amadeus/Projects/github.com/behrangsa/contrastfind'
+        text=True
     )
 
     # Should succeed and show help
